@@ -145,6 +145,25 @@ void led4Off() {
 }
 
 // =========================
+// BẬT TẤT CẢ 4 ĐÈN
+// =========================
+void allOn() {
+  isBlinking = false;
+  digitalWrite(LED1, HIGH);
+  digitalWrite(LED2, HIGH);
+  digitalWrite(LED3, HIGH);
+  digitalWrite(LED4, HIGH);
+
+  for (int i = 0; i < 4; i++) {
+    ledState[i] = true;
+  }
+  updateDisplay();
+
+  allowCORS();
+  server.send(200, "text/plain", "ALL LED ON");
+}
+
+// =========================
 // TẮT TẤT CẢ
 // =========================
 void allOff() {
@@ -253,6 +272,7 @@ void setup() {
   server.on("/led4/off", led4Off);
 
   server.on("/all/off", allOff);
+  server.on("/all/on", allOn);
   server.on("/blink", handleBlinkRoute);
 
   server.begin();
