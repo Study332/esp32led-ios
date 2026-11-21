@@ -2,8 +2,8 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ESP32 LED Control - Điều khiển cử chỉ</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Điều Khiển Đèn ESP32</title>
 
     <!-- Thư viện MediaPipe Hands CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
@@ -12,22 +12,6 @@
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
 
     <style>
-        :root {
-            --bg-color: #0f172a;
-            --card-bg: #1e293b;
-            --card-border: #334155;
-            --primary: #38bdf8;
-            --primary-hover: #0ea5e9;
-            --on-btn: #10b981;
-            --on-btn-hover: #059669;
-            --off-btn: #ef4444;
-            --off-btn-hover: #dc2626;
-            --blink-btn: #8b5cf6;
-            --text-main: #f8fafc;
-            --text-muted: #94a3b8;
-            --led-active: #22c55e;
-        }
-
         * {
             box-sizing: border-box;
             margin: 0;
@@ -37,12 +21,11 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background: var(--bg-color);
-            color: var(--text-main);
+            background-color: #f1f5f9;
+            color: #1e293b;
+            padding: 16px;
             display: flex;
             justify-content: center;
-            min-height: 100vh;
-            padding: 16px 12px 32px 12px;
         }
 
         .container {
@@ -50,340 +33,207 @@
             max-width: 480px;
             display: flex;
             flex-direction: column;
-            gap: 18px;
+            gap: 14px;
         }
 
+        /* Tiêu đề ứng dụng */
         header {
             text-align: center;
-            padding-bottom: 4px;
+            padding: 4px 0 2px 0;
         }
 
         header h1 {
-            font-size: 22px;
-            font-weight: 800;
-            letter-spacing: 0.5px;
-            color: #38bdf8;
-            text-transform: uppercase;
+            font-size: 20px;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 2px;
         }
 
         header p {
             font-size: 13px;
-            color: var(--text-muted);
-            margin-top: 4px;
+            color: #64748b;
         }
 
-        .section-box {
-            background: var(--card-bg);
-            border: 1px solid var(--card-border);
-            border-radius: 16px;
-            padding: 16px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+        /* Khung thẻ chức năng */
+        .card {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 14px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+            border: 1px solid #e2e8f0;
         }
 
-        .section-header {
-            font-size: 15px;
-            font-weight: 700;
-            color: #e2e8f0;
-            margin-bottom: 14px;
+        .card-header {
+            font-size: 14px;
+            font-weight: 600;
+            color: #334155;
+            margin-bottom: 12px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        /* Danh sách 4 đèn */
+        .led-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .led-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 12px;
+            background: #f8fafc;
+            border-radius: 8px;
+            border: 1px solid #edf2f7;
+        }
+
+        .led-info {
             display: flex;
             align-items: center;
             gap: 8px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
         }
 
-        /* --- PHẦN 1: ĐIỀU KHIỂN BẰNG ĐIỆN THOẠI (NÚT BẤM) --- */
-        .buttons-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: #cbd5e1;
+            transition: all 0.2s ease;
         }
 
-        button.btn {
-            padding: 14px 10px;
-            font-size: 15px;
-            font-weight: 700;
-            border: none;
-            border-radius: 10px;
-            color: white;
-            cursor: pointer;
-            transition: transform 0.1s ease, filter 0.15s ease, opacity 0.15s;
+        .status-dot.active {
+            background-color: #16a34a;
+            box-shadow: 0 0 6px rgba(22, 163, 74, 0.6);
+        }
+
+        .led-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        .led-pin {
+            font-size: 12px;
+            color: #94a3b8;
+        }
+
+        .btn-pair {
             display: flex;
-            align-items: center;
-            justify-content: center;
             gap: 6px;
         }
 
-        button.btn:active {
+        /* Nút bấm */
+        .btn {
+            border: none;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            padding: 7px 14px;
+            border-radius: 6px;
+            transition: all 0.15s ease;
+            user-select: none;
+        }
+
+        .btn:active {
             transform: scale(0.97);
         }
 
-        button.btn.on {
-            background: linear-gradient(135deg, #10b981, #059669);
-            box-shadow: 0 3px 8px rgba(16, 185, 129, 0.3);
+        .btn-on {
+            background-color: #16a34a;
+            color: #ffffff;
         }
-        button.btn.on:hover {
-            filter: brightness(1.1);
-        }
+        .btn-on:hover { background-color: #15803d; }
 
-        button.btn.off {
-            background: linear-gradient(135deg, #ef4444, #b91c1c);
-            box-shadow: 0 3px 8px rgba(239, 68, 68, 0.3);
+        .btn-off {
+            background-color: #ffffff;
+            color: #dc2626;
+            border: 1px solid #fca5a5;
         }
-        button.btn.off:hover {
-            filter: brightness(1.1);
-        }
+        .btn-off:hover { background-color: #fef2f2; }
 
-        .blink-btn {
-            grid-column: span 2;
-            background: linear-gradient(135deg, #8b5cf6, #6366f1) !important;
-            box-shadow: 0 3px 8px rgba(139, 92, 246, 0.35) !important;
-            padding: 13px !important;
-            font-size: 14.5px !important;
-            margin-top: 2px;
-        }
-        .blink-btn:hover {
-            filter: brightness(1.1);
-        }
-
-        .all-off-btn {
-            grid-column: span 2;
-            background: #475569 !important;
-            padding: 12px !important;
-            font-size: 14px !important;
-            margin-top: 2px;
-        }
-
-        /* Chỉ báo LED (Visual Indicators) */
-        .led-status-bar {
+        /* Nút chức năng chung */
+        .all-actions {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 6px;
-            margin-top: 12px;
-            padding-top: 12px;
-            border-top: 1px dashed var(--card-border);
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #f1f5f9;
         }
 
-        .led-indicator {
-            background: #0f172a;
-            border: 1px solid var(--card-border);
-            border-radius: 8px;
-            padding: 6px 4px;
+        .btn-blink {
+            background-color: #d97706;
+            color: #ffffff;
+            padding: 9px;
+            font-size: 13px;
             text-align: center;
-            font-size: 11px;
-            font-weight: 600;
-            color: var(--text-muted);
-            transition: all 0.2s ease;
         }
+        .btn-blink:hover { background-color: #b45309; }
 
-        .led-indicator.active {
-            background: rgba(34, 197, 94, 0.15);
-            border-color: #22c55e;
-            color: #4ade80;
-            box-shadow: 0 0 8px rgba(34, 197, 94, 0.4);
+        .btn-all-off {
+            background-color: #475569;
+            color: #ffffff;
+            padding: 9px;
+            font-size: 13px;
+            text-align: center;
         }
+        .btn-all-off:hover { background-color: #334155; }
 
-        .led-indicator .led-dot {
-            display: inline-block;
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: #64748b;
-            margin-right: 4px;
-            vertical-align: middle;
-        }
-
-        .led-indicator.active .led-dot {
-            background: #22c55e;
-            box-shadow: 0 0 6px #22c55e;
-        }
-
-        /* --- PHẦN 2: ĐIỀU KHIỂN BẰNG CỬ CHỈ (CAMERA) --- */
+        /* Khung Camera */
         .camera-box {
             position: relative;
             width: 100%;
-            border-radius: 14px;
+            height: 270px;
+            background: #000000;
+            border-radius: 10px;
             overflow: hidden;
-            background: #090d16;
-            aspect-ratio: 4 / 3;
-            border: 2px solid var(--card-border);
             display: flex;
             align-items: center;
             justify-content: center;
         }
 
-        video#webcam {
+        #webcam {
             width: 100%;
             height: 100%;
             object-fit: cover;
-            transform: scaleX(-1); /* Gương camera trước */
-            display: block;
+            transform: scaleX(-1);
         }
 
-        canvas#output_canvas {
+        #output_canvas {
             position: absolute;
-            left: 0;
             top: 0;
+            left: 0;
             width: 100%;
             height: 100%;
             object-fit: cover;
-            transform: scaleX(-1); /* Đồng bộ gương với video */
+            transform: scaleX(-1);
             pointer-events: none;
         }
 
-        .camera-overlay-badge {
+        .camera-badge {
             position: absolute;
-            top: 10px;
-            right: 10px;
-            background: rgba(15, 23, 42, 0.85);
-            backdrop-filter: blur(4px);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            border-radius: 20px;
-            padding: 4px 10px;
+            top: 8px;
+            left: 8px;
+            background: rgba(0, 0, 0, 0.65);
+            color: #ffffff;
             font-size: 11px;
-            font-weight: 700;
-            color: #38bdf8;
+            font-weight: 500;
+            padding: 4px 8px;
+            border-radius: 12px;
             display: flex;
             align-items: center;
             gap: 5px;
-            z-index: 10;
         }
 
-        .live-dot {
-            width: 7px;
-            height: 7px;
+        .camera-dot {
+            width: 6px;
+            height: 6px;
             border-radius: 50%;
-            background: #ef4444;
-            animation: pulse 1.2s infinite ease-in-out;
+            background-color: #22c55e;
         }
 
-        @keyframes pulse {
-            0% { transform: scale(0.9); opacity: 0.6; }
-            50% { transform: scale(1.3); opacity: 1; }
-            100% { transform: scale(0.9); opacity: 0.6; }
-        }
-
-        /* Bảng trạng thái & Cử chỉ */
-        .status-container {
-            margin-top: 12px;
-            background: #0f172a;
-            border: 1px solid var(--card-border);
-            border-radius: 12px;
-            padding: 12px;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .status-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            font-size: 13px;
-        }
-
-        .status-label {
-            color: var(--text-muted);
-            font-weight: 600;
-        }
-
-        .status-text {
-            color: #38bdf8;
-            font-weight: 700;
-            text-align: right;
-            max-width: 65%;
-            word-break: break-word;
-        }
-
-        .gesture-pill {
-            display: inline-block;
-            background: #334155;
-            color: #f8fafc;
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 700;
-            transition: all 0.2s ease;
-        }
-
-        .gesture-pill.detected {
-            background: #0284c7;
-            color: #ffffff;
-            box-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
-        }
-
-        /* Bảng hướng dẫn cử chỉ */
-        .gesture-guide {
-            margin-top: 12px;
-            background: rgba(15, 23, 42, 0.6);
-            border-radius: 10px;
-            padding: 10px 12px;
-            font-size: 12.5px;
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
-
-        .guide-title {
-            font-weight: 700;
-            color: #cbd5e1;
-            margin-bottom: 2px;
-        }
-
-        .guide-item {
-            display: flex;
-            justify-content: space-between;
-            color: #94a3b8;
-            border-bottom: 1px dashed rgba(255, 255, 255, 0.05);
-            padding-bottom: 4px;
-        }
-
-        .guide-item:last-child {
-            border-bottom: none;
-            padding-bottom: 0;
-        }
-
-        .guide-item span:first-child {
-            font-weight: 600;
-            color: #e2e8f0;
-        }
-
-        /* Thông báo lỗi & Cảnh báo */
-        .alert-box {
-            background: #450a0a;
-            border: 1px solid #991b1b;
-            color: #fecaca;
-            padding: 12px;
-            border-radius: 10px;
-            font-size: 13px;
-            line-height: 1.5;
-            display: none;
-            margin-top: 12px;
-            text-align: left;
-        }
-
-        .alert-box code {
-            background: rgba(0, 0, 0, 0.35);
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-family: monospace;
-            color: #fca5a5;
-            font-size: 12px;
-        }
-
-        .alert-box button {
-            margin-top: 10px;
-            padding: 8px 14px;
-            background: #dc2626;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            font-weight: 600;
-            font-size: 13px;
-            cursor: pointer;
-        }
-
-        /* Thanh nút thao tác camera */
         .cam-controls {
             display: flex;
             gap: 8px;
@@ -392,379 +242,355 @@
 
         .btn-secondary {
             flex: 1;
-            padding: 10px;
-            background: #334155;
-            color: #e2e8f0;
-            border: 1px solid var(--card-border);
+            background: #f8fafc;
+            color: #475569;
+            border: 1px solid #cbd5e1;
+            padding: 7px;
+            font-size: 12px;
+            border-radius: 6px;
+        }
+        .btn-secondary:hover { background: #f1f5f9; }
+
+        /* Bảng trạng thái */
+        .status-box {
+            margin-top: 10px;
+            padding: 10px 12px;
+            background: #f8fafc;
             border-radius: 8px;
-            font-size: 13px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background 0.15s;
+            border: 1px solid #e2e8f0;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
         }
 
-        .btn-secondary:active {
-            background: #475569;
+        .status-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+        }
+
+        .status-label {
+            color: #64748b;
+        }
+
+        .status-text {
+            font-weight: 600;
+            color: #0f172a;
+        }
+
+        .gesture-pill {
+            background-color: #f1f5f9;
+            color: #475569;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .gesture-pill.detected {
+            background-color: #dcfce7;
+            color: #15803d;
+        }
+
+        /* Bảng quy ước đơn giản */
+        .guide-box {
+            margin-top: 10px;
+            padding: 10px;
+            background: #ffffff;
+            border-radius: 8px;
+            border: 1px dashed #cbd5e1;
+            font-size: 12px;
+            color: #475569;
+        }
+
+        .guide-title {
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 4px;
+        }
+
+        .guide-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4px 8px;
+        }
+
+        .alert-error {
+            display: none;
+            margin-top: 8px;
+            padding: 8px 10px;
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #b91c1c;
+            border-radius: 6px;
+            font-size: 12px;
         }
     </style>
 </head>
-
 <body>
 
 <div class="container">
 
     <header>
-        <h1>ESP32 LED CONTROL</h1>
-        <p>Hệ thống điều khiển 4 LED qua Wi-Fi & Cử chỉ bàn tay</p>
+        <h1>Điều Khiển Đèn ESP32</h1>
+        <p>Bật tắt bằng nút bấm hoặc cử chỉ bàn tay</p>
     </header>
 
-    <!-- ============================================== -->
-    <!-- PHẦN 1: ĐIỀU KHIỂN BẰNG ĐIỆN THOẠI (NÚT BẤM) -->
-    <!-- ============================================== -->
-    <section class="section-box">
-        <div class="section-header">
-            <span>📱</span> ĐIỀU KHIỂN BẰNG ĐIỆN THOẠI
+    <!-- PHẦN 1: BẢNG ĐIỀU KHIỂN NÚT BẤM -->
+    <div class="card">
+        <div class="card-header">Bảng điều khiển đèn</div>
+        
+        <div class="led-list">
+            <div class="led-row">
+                <div class="led-info">
+                    <span class="status-dot" id="dot-1"></span>
+                    <span class="led-name">Đèn 1</span>
+                    <span class="led-pin">(GPIO 25)</span>
+                </div>
+                <div class="btn-pair">
+                    <button class="btn btn-on" onclick="ledOn(1)">Bật</button>
+                    <button class="btn btn-off" onclick="ledOff(1)">Tắt</button>
+                </div>
+            </div>
+
+            <div class="led-row">
+                <div class="led-info">
+                    <span class="status-dot" id="dot-2"></span>
+                    <span class="led-name">Đèn 2</span>
+                    <span class="led-pin">(GPIO 26)</span>
+                </div>
+                <div class="btn-pair">
+                    <button class="btn btn-on" onclick="ledOn(2)">Bật</button>
+                    <button class="btn btn-off" onclick="ledOff(2)">Tắt</button>
+                </div>
+            </div>
+
+            <div class="led-row">
+                <div class="led-info">
+                    <span class="status-dot" id="dot-3"></span>
+                    <span class="led-name">Đèn 3</span>
+                    <span class="led-pin">(GPIO 27)</span>
+                </div>
+                <div class="btn-pair">
+                    <button class="btn btn-on" onclick="ledOn(3)">Bật</button>
+                    <button class="btn btn-off" onclick="ledOff(3)">Tắt</button>
+                </div>
+            </div>
+
+            <div class="led-row">
+                <div class="led-info">
+                    <span class="status-dot" id="dot-4"></span>
+                    <span class="led-name">Đèn 4</span>
+                    <span class="led-pin">(GPIO 32)</span>
+                </div>
+                <div class="btn-pair">
+                    <button class="btn btn-on" onclick="ledOn(4)">Bật</button>
+                    <button class="btn btn-off" onclick="ledOff(4)">Tắt</button>
+                </div>
+            </div>
         </div>
 
-        <div class="buttons-grid">
-            <button class="btn on" onclick="ledOn(1)">LED 1 ON</button>
-            <button class="btn off" onclick="ledOff(1)">LED 1 OFF</button>
-
-            <button class="btn on" onclick="ledOn(2)">LED 2 ON</button>
-            <button class="btn off" onclick="ledOff(2)">LED 2 OFF</button>
-
-            <button class="btn on" onclick="ledOn(3)">LED 3 ON</button>
-            <button class="btn off" onclick="ledOff(3)">LED 3 OFF</button>
-
-            <button class="btn on" onclick="ledOn(4)">LED 4 ON</button>
-            <button class="btn off" onclick="ledOff(4)">LED 4 OFF</button>
-
-            <button class="btn blink-btn" onclick="manualStartBlinking()">✨ NHẤP NHÁY CÁC LED (5 NGÓN)</button>
-            <button class="btn all-off-btn" onclick="allOff()">TẮT TẤT CẢ LED (0 NGÓN)</button>
+        <div class="all-actions">
+            <button class="btn btn-blink" onclick="manualStartBlinking()">Nhấp nháy tất cả</button>
+            <button class="btn btn-all-off" onclick="allOff()">Tắt tất cả đèn</button>
         </div>
+    </div>
 
-        <!-- Trạng thái LED hiển thị trực quan -->
-        <div class="led-status-bar">
-            <div class="led-indicator" id="ind-led-1"><span class="led-dot"></span>LED 1 (25)</div>
-            <div class="led-indicator" id="ind-led-2"><span class="led-dot"></span>LED 2 (26)</div>
-            <div class="led-indicator" id="ind-led-3"><span class="led-dot"></span>LED 3 (27)</div>
-            <div class="led-indicator" id="ind-led-4"><span class="led-dot"></span>LED 4 (32)</div>
-        </div>
-    </section>
+    <!-- PHẦN 2: ĐIỀU KHIỂN BẰNG CAMERA -->
+    <div class="card">
+        <div class="card-header">Điều khiển bằng cử chỉ ngón tay</div>
 
-    <!-- ============================================== -->
-    <!-- PHẦN 2: ĐIỀU KHIỂN BẰNG CỬ CHỈ (CAMERA)       -->
-    <!-- ============================================== -->
-    <section class="section-box">
-        <div class="section-header">
-            <span>🖐️</span> ĐIỀU KHIỂN BẰNG CỬ CHỈ
-        </div>
-
-        <!-- Khung Video Camera & Canvas nhận diện -->
         <div class="camera-box">
             <video id="webcam" autoplay playsinline muted></video>
             <canvas id="output_canvas"></canvas>
-            <div class="camera-overlay-badge" id="camera-badge">
-                <span class="live-dot"></span>
-                <span id="badge-text">CAMERA LIVE</span>
+            <div class="camera-badge" id="camera-badge">
+                <span class="camera-dot"></span>
+                <span>Camera đang bật</span>
             </div>
         </div>
 
-        <!-- Nút điều khiển nhanh camera -->
         <div class="cam-controls">
-            <button class="btn-secondary" onclick="restartCamera()">🔄 Khởi động lại Camera</button>
-            <button class="btn-secondary" onclick="switchFacingMode()">📷 Đổi Camera trước/sau</button>
+            <button class="btn-secondary" onclick="switchFacingMode()">Đổi camera trước / sau</button>
+            <button class="btn-secondary" onclick="restartCamera()">Mở lại camera</button>
         </div>
 
-        <!-- Hộp cảnh báo lỗi camera nếu có -->
-        <div id="camera-error" class="alert-box"></div>
+        <div id="camera-error" class="alert-error"></div>
 
-        <!-- Bảng trạng thái -->
-        <div class="status-container">
+        <div class="status-box">
             <div class="status-row">
-                <span class="status-label">Trạng thái:</span>
-                <span class="status-text" id="status">Đang chờ camera...</span>
-            </div>
-            <div class="status-row">
-                <span class="status-label">Cử chỉ:</span>
+                <span class="status-label">Cử chỉ nhận diện:</span>
                 <span class="gesture-pill" id="gesture-pill">Đang chờ bàn tay...</span>
             </div>
+            <div class="status-row">
+                <span class="status-label">Trạng thái hệ thống:</span>
+                <span class="status-text" id="status">Sẵn sàng</span>
+            </div>
         </div>
 
-        <!-- Hướng dẫn cử chỉ -->
-        <div class="gesture-guide">
-            <div class="guide-title">Quy ước cử chỉ:</div>
-            <div class="guide-item">
-                <span>☝️ 1 ngón</span>
-                <span>LED 1 ON (GPIO 25)</span>
-            </div>
-            <div class="guide-item">
-                <span>✌️ 2 ngón</span>
-                <span>LED 2 ON (GPIO 26)</span>
-            </div>
-            <div class="guide-item">
-                <span>🤟 3 ngón</span>
-                <span>LED 3 ON (GPIO 27)</span>
-            </div>
-            <div class="guide-item">
-                <span>🖐️ 4 ngón</span>
-                <span>LED 4 ON (GPIO 32)</span>
-            </div>
-            <div class="guide-item">
-                <span>🖐️ 5 ngón</span>
-                <span>✨ Nhấp nháy tất cả LED</span>
-            </div>
-            <div class="guide-item">
-                <span>✊ 0 ngón</span>
-                <span>Tắt tất cả LED</span>
+        <div class="guide-box">
+            <div class="guide-title">Quy ước số ngón tay:</div>
+            <div class="guide-grid">
+                <div>• <b>1 ngón</b>: Bật Đèn 1</div>
+                <div>• <b>2 ngón</b>: Bật Đèn 2</div>
+                <div>• <b>3 ngón</b>: Bật Đèn 3</div>
+                <div>• <b>4 ngón</b>: Bật Đèn 4</div>
+                <div>• <b>5 ngón</b>: Nhấp nháy tất cả</div>
+                <div>• <b>Nắm tay (0 ngón)</b>: Tắt hết</div>
             </div>
         </div>
-    </section>
+    </div>
 
 </div>
 
-<!-- ==================================================== -->
-<!-- JAVASCRIPT: LOGIC ESP32, CAMERA VÀ NHẬN DIỆN CỬ CHỈ -->
-<!-- ==================================================== -->
 <script>
-    // IP mặc định của ESP32 trong chế độ Access Point
     const ESP32_IP = "192.168.4.1";
 
-    // Danh sách API endpoint của ESP32:
-    // /led1/on   /led1/off
-    // /led2/on   /led2/off
-    // /led3/on   /led3/off
-    // /led4/on   /led4/off
-
-    // Quản lý trạng thái 4 LED trên giao diện
     const ledStates = { 1: false, 2: false, 3: false, 4: false };
+    let isBlinking = false;
+    let blinkIntervalId = null;
 
-    // Cập nhật giao diện chỉ báo LED
     function updateLedIndicators() {
         for (let i = 1; i <= 4; i++) {
-            const ind = document.getElementById(`ind-led-${i}`);
-            if (ind) {
+            const dot = document.getElementById(`dot-${i}`);
+            if (dot) {
                 if (ledStates[i]) {
-                    ind.classList.add("active");
+                    dot.classList.add("active");
                 } else {
-                    ind.classList.remove("active");
+                    dot.classList.remove("active");
                 }
             }
         }
     }
 
-    // ==============================================
-    // 1. ĐIỀU KHIỂN ESP32 (HTTP REQUEST)
-    // ==============================================
-    
-    // Gửi HTTP GET request tới ESP32, hỗ trợ timeout và không vướng CORS
-    async function sendEsp32Command(endpoint) {
-        const url = `http://${ESP32_IP}${endpoint}`;
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 2000);
-
-        try {
-            // mode: 'no-cors' giúp gửi request thành công ngay cả khi ESP32 không trả về header CORS
-            await fetch(url, {
-                method: "GET",
-                mode: "no-cors",
-                cache: "no-store",
-                signal: controller.signal
-            });
-            clearTimeout(timeoutId);
-            console.log(`[ESP32] Gửi thành công: ${url}`);
-            return true;
-        } catch (error) {
-            clearTimeout(timeoutId);
-            console.warn(`[ESP32] Lỗi khi gửi lệnh tới ${url}:`, error.message);
-            return false;
-        }
+    function sendEsp32Command(path) {
+        const url = `http://${ESP32_IP}${path}`;
+        return fetch(url, {
+            method: "GET",
+            mode: "no-cors",
+            cache: "no-store"
+        }).catch(err => {
+            console.log("Gửi lệnh ESP32:", path);
+        });
     }
 
-    // Quản lý chế độ nhấp nháy (Blinking Mode)
-    let isBlinking = false;
-    let blinkTimeoutId = null;
-
     function stopBlinking() {
-        isBlinking = false;
-        if (blinkTimeoutId) {
-            clearTimeout(blinkTimeoutId);
-            blinkTimeoutId = null;
+        if (isBlinking) {
+            isBlinking = false;
+            if (blinkIntervalId) {
+                clearInterval(blinkIntervalId);
+                blinkIntervalId = null;
+            }
         }
     }
 
     function startBlinking() {
         if (isBlinking) return;
         isBlinking = true;
-        currentLedOn = 5;
-
-        let blinkState = false;
-        async function runBlinkLoop() {
-            if (!isBlinking) return;
-            blinkState = !blinkState;
-
-            // Đồng bộ trạng thái đèn trên UI
-            for (let i = 1; i <= 4; i++) {
-                ledStates[i] = blinkState;
-            }
-            updateLedIndicators();
-
-            // Gửi lệnh ON hoặc OFF đồng loạt tới cả 4 LED
-            const action = blinkState ? "on" : "off";
-            await Promise.all([
-                sendEsp32Command(`/led1/${action}`),
-                sendEsp32Command(`/led2/${action}`),
-                sendEsp32Command(`/led3/${action}`),
-                sendEsp32Command(`/led4/${action}`)
-            ]);
-
-            if (isBlinking) {
-                blinkTimeoutId = setTimeout(runBlinkLoop, 450); // Nhịp nhấp nháy ~450ms
-            }
-        }
-
+        sendEsp32Command("/blink");
         runBlinkLoop();
     }
 
+    function runBlinkLoop() {
+        let toggle = false;
+        blinkIntervalId = setInterval(() => {
+            if (!isBlinking) {
+                clearInterval(blinkIntervalId);
+                blinkIntervalId = null;
+                return;
+            }
+            toggle = !toggle;
+            for (let i = 1; i <= 4; i++) {
+                ledStates[i] = toggle;
+            }
+            updateLedIndicators();
+        }, 350);
+    }
+
     function manualStartBlinking() {
-        activeGesture = 5;
-        candidateGesture = 5;
-        candidateCount = 0;
-        setGesturePill("🖐️ 5 ngón (Nhấp nháy)");
-        setStatusText("Nút bấm: Đang nhấp nháy tất cả LED");
+        setStatusText("Bật chế độ nhấp nháy đèn");
+        setGesturePill("Nhấp nháy (5 ngón)", true);
         startBlinking();
     }
 
-    // Bật 1 LED (/led1/on, /led2/on, /led3/on, /led4/on)
-    async function ledOn(number) {
+    async function ledOn(id) {
         stopBlinking();
-        activeGesture = -1; // Reset cử chỉ để nút bấm thủ công có hiệu lực ngay
-        candidateGesture = -1;
-        candidateCount = 0;
-        currentLedOn = number;
-        ledStates[number] = true;
+        ledStates[id] = true;
         updateLedIndicators();
-        setStatusText(`Nút bấm: Bật LED ${number}`);
-        return await sendEsp32Command(`/led${number}/on`);
+        setStatusText(`Đã bật Đèn ${id}`);
+        await sendEsp32Command(`/led${id}/on`);
     }
 
-    // Tắt 1 LED (/led1/off, /led2/off, /led3/off, /led4/off)
-    async function ledOff(number) {
+    async function ledOff(id) {
         stopBlinking();
-        activeGesture = -1; // Reset cử chỉ
-        candidateGesture = -1;
-        candidateCount = 0;
-        if (currentLedOn === number) {
-            currentLedOn = 0;
-        }
-        ledStates[number] = false;
+        ledStates[id] = false;
         updateLedIndicators();
-        setStatusText(`Nút bấm: Tắt LED ${number}`);
-        return await sendEsp32Command(`/led${number}/off`);
+        setStatusText(`Đã tắt Đèn ${id}`);
+        await sendEsp32Command(`/led${id}/off`);
     }
 
-    // Tắt tất cả 4 LED tuần tự
     async function allOff() {
         stopBlinking();
-        activeGesture = 0;
-        candidateGesture = 0;
-        candidateCount = 0;
-        currentLedOn = 0;
         for (let i = 1; i <= 4; i++) {
             ledStates[i] = false;
         }
+        currentLedOn = 0;
         updateLedIndicators();
-        setStatusText("Đã tắt tất cả LED");
-        setGesturePill("✊ 0 ngón - Tắt tất cả");
-
-        await sendEsp32Command("/led1/off");
-        await sendEsp32Command("/led2/off");
-        await sendEsp32Command("/led3/off");
-        await sendEsp32Command("/led4/off");
+        setStatusText("Đã tắt tất cả đèn");
+        setGesturePill("Tắt hết (0 ngón)", true);
+        await sendEsp32Command("/all/off");
     }
 
-    // ==============================================
-    // 2. KHỞI TẠO VÀ XỬ LÝ CAMERA
-    // ==============================================
+    const statusElem = document.getElementById("status");
+    const gesturePill = document.getElementById("gesture-pill");
+    const cameraErrorBox = document.getElementById("camera-error");
+
+    function setStatusText(msg) {
+        if (statusElem) statusElem.innerText = msg;
+    }
+
+    function setGesturePill(text, isDetected) {
+        if (!gesturePill) return;
+        gesturePill.innerText = text;
+        if (isDetected) {
+            gesturePill.classList.add("detected");
+        } else {
+            gesturePill.classList.remove("detected");
+        }
+    }
 
     const video = document.getElementById("webcam");
     const canvas = document.getElementById("output_canvas");
     const ctx = canvas.getContext("2d");
 
-    const statusText = document.getElementById("status");
-    const gesturePill = document.getElementById("gesture-pill");
-    const cameraErrorBox = document.getElementById("camera-error");
-
-    let currentFacingMode = "user"; // Camera trước theo mặc định
     let currentStream = null;
     let isCameraRunning = false;
+    let currentFacingMode = "user";
+    let hands = null;
     let isProcessingFrame = false;
 
-    function setStatusText(text) {
-        if (statusText) statusText.innerText = text;
-    }
-
-    function setGesturePill(text, isDetected = true) {
-        if (gesturePill) {
-            gesturePill.innerText = text;
-            if (isDetected) {
-                gesturePill.classList.add("detected");
-            } else {
-                gesturePill.classList.remove("detected");
-            }
-        }
-    }
-
-    // Khởi tạo camera với xử lý lỗi chi tiết
     async function startCamera() {
         cameraErrorBox.style.display = "none";
         setStatusText("Đang xin quyền mở camera...");
 
-        // 1. Kiểm tra hỗ trợ MediaDevices trong trình duyệt
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-            let errorHtml = "<strong>Trình duyệt không hỗ trợ hoặc đang chặn Camera API.</strong>";
-
-            // Kiểm tra Secure Context (HTTPS / localhost)
-            const isSecure = window.isSecureContext || 
-                             location.protocol === "https:" || 
-                             location.hostname === "localhost" || 
-                             location.hostname === "127.0.0.1";
-
-            if (!isSecure) {
-                errorHtml += `
-                    <div style="margin-top: 8px;">
-                        <strong>Nguyên nhân:</strong> Trang web đang chạy qua HTTP (<code>${location.origin}</code>). 
-                        Trình duyệt di động (Chrome, Safari) yêu cầu bảo mật <strong>HTTPS</strong> hoặc <strong>localhost</strong> mới cho phép bật Camera.
-                        <br><br>
-                        <strong>Cách khắc phục trên Chrome điện thoại:</strong><br>
-                        1. Mở tab mới trên Chrome, truy cập: <code>chrome://flags</code><br>
-                        2. Tìm cờ: <code>Insecure origins treated as secure</code><br>
-                        3. Nhập địa chỉ: <code>${location.origin}</code> và chọn <strong>Enabled</strong>.<br>
-                        4. Nhấn <strong>Relaunch</strong> khởi động lại Chrome và mở lại trang.
-                    </div>
-                `;
-            } else {
-                errorHtml += "<div style=\"margin-top: 6px;\">Vui lòng cập nhật hoặc thử mở trang web bằng trình duyệt Chrome hoặc Safari phiên bản mới nhất.</div>";
-            }
-
-            showCameraError(errorHtml);
+            cameraErrorBox.style.display = "block";
+            cameraErrorBox.innerHTML = "Trình duyệt chưa cấp quyền camera hoặc không hỗ trợ.";
             setStatusText("Không mở được camera");
             return;
         }
 
-        // Tắt stream cũ nếu đang chạy
         if (currentStream) {
             currentStream.getTracks().forEach(track => track.stop());
             currentStream = null;
         }
 
-        // 2. Yêu cầu quyền camera với facingMode: "user" (camera trước)
         try {
             const constraints = {
                 video: {
                     facingMode: currentFacingMode,
-                    width: { ideal: 640 },
-                    height: { ideal: 480 }
+                    width: { ideal: 480 },
+                    height: { ideal: 360 }
                 },
                 audio: false
             };
@@ -772,16 +598,12 @@
             let stream;
             try {
                 stream = await navigator.mediaDevices.getUserMedia(constraints);
-            } catch (err1) {
-                console.warn("Không mở được camera với facingMode cụ thể, đang thử fallback mặc định:", err1);
-                // Fallback nếu thiết bị không hỗ trợ constraint facingMode
+            } catch (e) {
                 stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
             }
 
             currentStream = stream;
             video.srcObject = stream;
-
-            // Đảm bảo các thuộc tính phát video trên di động
             video.muted = true;
             video.playsInline = true;
             video.setAttribute("playsinline", "");
@@ -790,47 +612,15 @@
             await video.play();
 
             isCameraRunning = true;
-            setStatusText("Camera đang hoạt động. Đưa bàn tay vào khung hình...");
-            document.getElementById("camera-badge").style.display = "flex";
-
-            // Bắt đầu vòng lặp gửi frame cho MediaPipe
+            setStatusText("Camera đang chạy. Hãy đưa tay vào khung hình.");
             requestAnimationFrame(processVideoFrame);
 
         } catch (error) {
-            console.error("Camera Error:", error);
-            handleCameraPermissionError(error);
+            console.error("Lỗi Camera:", error);
+            cameraErrorBox.style.display = "block";
+            cameraErrorBox.innerHTML = "Không thể truy cập camera. Vui lòng cấp quyền camera trong cài đặt.";
+            setStatusText("Lỗi quyền camera");
         }
-    }
-
-    function handleCameraPermissionError(error) {
-        isCameraRunning = false;
-        setStatusText("Không mở được camera");
-
-        let reason = "";
-        if (error.name === "NotAllowedError" || error.name === "PermissionDeniedError") {
-            reason = `
-                <strong>Bạn đã từ chối quyền truy cập Camera.</strong><br>
-                Vui lòng nhấn vào biểu tượng ổ khóa / cài đặt trên thanh địa chỉ của trình duyệt, chọn <strong>Cho phép truy cập Camera (Allow Camera)</strong>, sau đó nhấn nút "Thử lại".
-            `;
-        } else if (error.name === "NotFoundError" || error.name === "DevicesNotFoundError") {
-            reason = "<strong>Không tìm thấy thiết bị camera</strong> trên máy hoặc điện thoại.";
-        } else if (error.name === "NotReadableError" || error.name === "TrackStartError") {
-            reason = "<strong>Camera đang bị ứng dụng khác chiếm dụng</strong> hoặc bị khóa bởi hệ thống. Vui lòng tắt các ứng dụng đang dùng camera rồi thử lại.";
-        } else if (error.name === "OverconstrainedError") {
-            reason = "Cấu hình camera yêu cầu không tương thích với thiết bị của bạn.";
-        } else {
-            reason = `Lỗi: ${error.name} - ${error.message || "Không thể khởi động camera."}`;
-        }
-
-        showCameraError(reason);
-    }
-
-    function showCameraError(htmlMessage) {
-        cameraErrorBox.innerHTML = `
-            <div>⚠️ ${htmlMessage}</div>
-            <button onclick="startCamera()">🔄 Thử lại kết nối Camera</button>
-        `;
-        cameraErrorBox.style.display = "block";
     }
 
     function restartCamera() {
@@ -839,27 +629,12 @@
 
     function switchFacingMode() {
         currentFacingMode = (currentFacingMode === "user") ? "environment" : "user";
-        // Đồng bộ hiệu ứng lật gương: chỉ lật gương khi dùng camera trước
-        if (currentFacingMode === "user") {
-            video.style.transform = "scaleX(-1)";
-            canvas.style.transform = "scaleX(-1)";
-        } else {
-            video.style.transform = "scaleX(1)";
-            canvas.style.transform = "scaleX(1)";
-        }
         startCamera();
     }
 
-    // ==============================================
-    // 3. MEDIAPIPE HANDS & NHẬN DIỆN CỬ CHỈ
-    // ==============================================
-
-    let hands = null;
-
     function initMediaPipeHands() {
         if (typeof Hands === "undefined") {
-            console.error("Lỗi: Thư viện MediaPipe Hands chưa tải được.");
-            showCameraError("Không thể tải thư viện nhận diện bàn tay MediaPipe Hands từ CDN. Vui lòng kiểm tra lại kết nối mạng Internet của bạn.");
+            console.warn("MediaPipe Hands chưa tải được từ CDN.");
             return false;
         }
 
@@ -869,31 +644,29 @@
             });
 
             hands.setOptions({
-                maxNumHands: 1, // Chỉ nhận diện 1 bàn tay tại một thời điểm
-                modelComplexity: 1,
-                minDetectionConfidence: 0.6,
-                minTrackingConfidence: 0.6
+                maxNumHands: 1,
+                modelComplexity: 0,
+                minDetectionConfidence: 0.5,
+                minTrackingConfidence: 0.5
             });
 
             hands.onResults(onHandResults);
             return true;
         } catch (err) {
-            console.error("Lỗi khởi tạo MediaPipe Hands:", err);
-            showCameraError(`Lỗi khởi tạo MediaPipe Hands: ${err.message}`);
+            console.error("Lỗi khởi tạo Hands:", err);
             return false;
         }
     }
 
-    // Vòng lặp lấy frame từ video gửi vào MediaPipe Hands
     async function processVideoFrame() {
         if (!isCameraRunning) return;
 
-        if (video.readyState >= 2 && !isProcessingFrame && hands) {
+        if (video.readyState >= 2 && !isProcessingFrame && hands && video.videoWidth > 0) {
             isProcessingFrame = true;
             try {
                 await hands.send({ image: video });
             } catch (err) {
-                console.error("Lỗi gửi frame MediaPipe:", err);
+                console.error("Lỗi MediaPipe:", err);
             }
             isProcessingFrame = false;
         }
@@ -901,89 +674,96 @@
         requestAnimationFrame(processVideoFrame);
     }
 
-    // Thuật toán đếm số ngón tay chuẩn xác từ 21 Landmark (0, 1, 2, 3, 4, 5 ngón)
     function countFingers(landmarks) {
-        // Hàm tính khoảng cách giữa 2 điểm
         function dist(p1, p2) {
             return Math.hypot(p1.x - p2.x, p1.y - p2.y);
         }
 
         const wrist = landmarks[0];
 
-        // 4 ngón chính (Trỏ, Giữa, Áp út, Út):
-        // Mở khi đầu ngón (TIP) cao hơn khớp PIP (y nhỏ hơn)
-        // và khoảng cách từ đầu ngón đến cổ tay lớn hơn khớp PIP
-        const isIndexOpen  = landmarks[8].y  < landmarks[6].y  && dist(landmarks[8], wrist)  > dist(landmarks[6], wrist);
-        const isMiddleOpen = landmarks[12].y < landmarks[10].y && dist(landmarks[12], wrist) > dist(landmarks[10], wrist);
-        const isRingOpen   = landmarks[16].y < landmarks[14].y && dist(landmarks[16], wrist) > dist(landmarks[14], wrist);
-        const isPinkyOpen  = landmarks[20].y < landmarks[18].y && dist(landmarks[20], wrist) > dist(landmarks[18], wrist);
+        function checkFinger(tipIdx, pipIdx, mcpIdx) {
+            const tip = landmarks[tipIdx];
+            const pip = landmarks[pipIdx];
+            const mcp = landmarks[mcpIdx];
 
-        // Ngón cái (Thumb):
-        // Mở khi đầu ngón vươn xa ra khỏi gốc ngón út (17) và khớp ngón trỏ (5)
-        const isThumbOpen  = dist(landmarks[4], landmarks[17]) > dist(landmarks[3], landmarks[17]) * 1.15 &&
-                             dist(landmarks[4], landmarks[2])  > dist(landmarks[3], landmarks[2]);
+            const dTipWrist = dist(tip, wrist);
+            const dPipWrist = dist(pip, wrist);
+            const dTipMcp   = dist(tip, mcp);
+            const dPipMcp   = dist(pip, mcp);
 
-        // 1. Cử chỉ ✊ (0 ngón): Tất cả 4 ngón chính đều gập
+            const isUpright = tip.y < pip.y;
+            const isExtended = dTipWrist > dPipWrist * 1.05 && dTipMcp > dPipMcp * 1.05;
+
+            return isExtended || (isUpright && dTipWrist > dPipWrist);
+        }
+
+        const isIndexOpen  = checkFinger(8, 6, 5);
+        const isMiddleOpen = checkFinger(12, 10, 9);
+        const isRingOpen   = checkFinger(16, 14, 13);
+        const isPinkyOpen  = checkFinger(20, 18, 17);
+
+        // Ngón cái tối ưu nhạy cho 4 ngón và 5 ngón
+        const dThumbTipPinky  = dist(landmarks[4], landmarks[17]);
+        const dThumbIpPinky   = dist(landmarks[3], landmarks[17]);
+        const dThumbTipMcp2   = dist(landmarks[4], landmarks[2]);
+        const dThumbIpMcp2    = dist(landmarks[3], landmarks[2]);
+        const dThumbTipMiddle = dist(landmarks[4], landmarks[9]);
+        const palmWidth       = dist(landmarks[5], landmarks[17]);
+
+        const isThumbExtended     = dThumbTipMcp2 > dThumbIpMcp2 * 1.15;
+        const isThumbAwayFromPalm = (dThumbTipPinky > dThumbIpPinky * 0.95) && (dThumbTipMiddle > palmWidth * 0.7);
+        const isThumbWide         = dThumbTipPinky > palmWidth * 1.25;
+
+        const isThumbOpen = isThumbExtended && (isThumbAwayFromPalm || isThumbWide);
+
+        // 1. Cử chỉ 0 ngón (Nắm tay): 4 ngón chính đều gập
         if (!isIndexOpen && !isMiddleOpen && !isRingOpen && !isPinkyOpen) {
             return 0;
         }
 
-        // 2. Cử chỉ ☝️ (1 ngón): Chỉ ngón trỏ mở
+        // 2. Cử chỉ 1 ngón: Chỉ ngón trỏ mở
         if (isIndexOpen && !isMiddleOpen && !isRingOpen && !isPinkyOpen) {
             return 1;
         }
 
-        // 3. Cử chỉ ✌️ (2 ngón): Ngón trỏ + Ngón giữa mở
-        if (isIndexOpen && isMiddleOpen && !isRingOpen && !isPinkyOpen) {
+        // 3. Cử chỉ 2 ngón: Ngón trỏ + ngón giữa mở
+        if (isIndexOpen && isMiddleOpen && !isRingOpen && !isPinkyOpen && !isThumbOpen) {
             return 2;
         }
 
-        // 4. Cử chỉ 🤟 / 3 ngón:
-        // Kiểu A: Trỏ + Giữa + Áp út mở (3 ngón)
-        // Kiểu B: Cử chỉ 'I Love You' (Ngón cái + Trỏ + Út mở)
+        // 4. Cử chỉ 3 ngón:
         if (
             (isIndexOpen && isMiddleOpen && isRingOpen && !isPinkyOpen) ||
+            (isThumbOpen && isIndexOpen && isMiddleOpen && !isRingOpen && !isPinkyOpen) ||
             (isThumbOpen && isIndexOpen && isPinkyOpen && !isMiddleOpen && !isRingOpen)
         ) {
             return 3;
         }
 
-        // 5. Cử chỉ 🖐️ 4 ngón: 4 ngón chính mở, ngón cái gập vào lòng bàn tay
+        // 5. Cử chỉ 4 ngón: 4 ngón chính mở, ngón cái gập
         if (isIndexOpen && isMiddleOpen && isRingOpen && isPinkyOpen && !isThumbOpen) {
             return 4;
         }
 
-        // 6. Cử chỉ 🖐️ 5 ngón: Cả 5 ngón (ngón cái + 4 ngón chính) đều xòe mở -> Nhấp nháy các LED
+        // 6. Cử chỉ 5 ngón: Cả 5 ngón mở xòe
         if (isIndexOpen && isMiddleOpen && isRingOpen && isPinkyOpen && isThumbOpen) {
             return 5;
         }
 
-        // Dự phòng: Tính tổng số ngón đang duỗi
         let total = 0;
         if (isThumbOpen) total++;
         if (isIndexOpen) total++;
         if (isMiddleOpen) total++;
         if (isRingOpen) total++;
         if (isPinkyOpen) total++;
-
         return total;
     }
 
-    // ==============================================
-    // 4. XỬ LÝ KẾT QUẢ VÀ CHỐNG GỬI LỆNH LIÊN TỤC
-    // ==============================================
-
-    let candidateGesture = -1;
-    let candidateCount = 0;
-    const REQUIRED_STABLE_FRAMES = 5; // Yêu cầu giữ cử chỉ ổn định trong 5 frame liên tiếp (~150ms)
-
-    let activeGesture = -1;  // Cử chỉ đang có hiệu lực
-    let currentLedOn = 0;    // LED đang bật (0: không có, 1..4, 5: nhấp nháy)
-    let isExecuting = false; // Khóa tránh gửi request chồng chéo
-
     function onHandResults(results) {
-        canvas.width = video.videoWidth || 640;
-        canvas.height = video.videoHeight || 480;
+        if (!video.videoWidth || !video.videoHeight) return;
+
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
 
         ctx.save();
         ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -991,127 +771,113 @@
         if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
             const landmarks = results.multiHandLandmarks[0];
 
-            // Vẽ xương và các khớp nối bàn tay
             if (typeof drawConnectors === "function" && typeof HAND_CONNECTIONS !== "undefined") {
-                drawConnectors(ctx, landmarks, HAND_CONNECTIONS, { color: "#00FF00", lineWidth: 3 });
+                drawConnectors(ctx, landmarks, HAND_CONNECTIONS, { color: "#16a34a", lineWidth: 3 });
             }
             if (typeof drawLandmarks === "function") {
-                drawLandmarks(ctx, landmarks, { color: "#FF0000", lineWidth: 2 });
+                drawLandmarks(ctx, landmarks, { color: "#2563eb", lineWidth: 2 });
             }
 
-            // Đếm số ngón tay
-            const count = countFingers(landmarks);
-            processGesture(count);
+            const rawCount = countFingers(landmarks);
+            processGestureWithFilter(rawCount);
 
         } else {
-            // Không tìm thấy bàn tay trong khung hình
-            candidateGesture = -1;
-            candidateCount = 0;
-            setStatusText("Đang chờ camera... Đưa bàn tay vào khung hình");
-            setGesturePill("Chưa phát hiện bàn tay", false);
+            gestureHistory.length = 0;
+            setGesturePill("Đang chờ bàn tay...", false);
         }
 
         ctx.restore();
     }
 
-    // Bộ lọc chống rung và điều phối chuyển trạng thái cử chỉ
-    function processGesture(count) {
-        // Cập nhật bộ đếm độ ổn định
-        if (count === candidateGesture) {
-            candidateCount++;
-        } else {
-            candidateGesture = count;
-            candidateCount = 1;
+    const gestureHistory = [];
+    const HISTORY_SIZE = 5;
+    let activeGesture = -1;
+    let currentLedOn = 0;
+    let isExecuting = false;
+
+    function processGestureWithFilter(rawCount) {
+        gestureHistory.push(rawCount);
+        if (gestureHistory.length > HISTORY_SIZE) {
+            gestureHistory.shift();
         }
 
-        // Hiển thị cử chỉ tức thời trên giao diện
-        const labelMap = {
-            0: "✊ 0 ngón (Nắm tay)",
-            1: "☝️ 1 ngón",
-            2: "✌️ 2 ngón",
-            3: "🤟 3 ngón",
-            4: "🖐️ 4 ngón",
-            5: "🖐️ 5 ngón (Nhấp nháy)"
-        };
-        setGesturePill(labelMap[count] || `${count} ngón`, true);
+        const counts = {};
+        for (const g of gestureHistory) {
+            counts[g] = (counts[g] || 0) + 1;
+        }
 
-        // Chỉ gửi lệnh khi:
-        // 1. Cử chỉ ổn định đủ số frame (REQUIRED_STABLE_FRAMES)
-        // 2. Cử chỉ thực sự THAY ĐỔI so với cử chỉ đang áp dụng (activeGesture)
-        if (candidateCount >= REQUIRED_STABLE_FRAMES && candidateGesture !== activeGesture) {
-            activeGesture = candidateGesture;
-            executeGestureChange(activeGesture);
+        let bestGesture = rawCount;
+        let maxOccur = 0;
+        for (const [g, occur] of Object.entries(counts)) {
+            if (occur > maxOccur) {
+                maxOccur = occur;
+                bestGesture = Number(g);
+            }
+        }
+
+        const labelMap = {
+            0: "0 ngón (Nắm tay)",
+            1: "1 ngón (Đèn 1)",
+            2: "2 ngón (Đèn 2)",
+            3: "3 ngón (Đèn 3)",
+            4: "4 ngón (Đèn 4)",
+            5: "5 ngón (Nhấp nháy)"
+        };
+
+        setGesturePill(labelMap[bestGesture] || `${bestGesture} ngón`, true);
+
+        if (maxOccur >= 3 && bestGesture !== activeGesture) {
+            activeGesture = bestGesture;
+            executeGestureChange(bestGesture);
         }
     }
 
-    // Thực hiện chuyển đổi LED theo đúng quy tắc:
-    // - 1..4: bật LED tương ứng, tắt LED trước đó
-    // - 5 ngón: Sáng nhấp nháy tất cả 4 LED
-    // - 0 ngón: Tắt tất cả LED
     async function executeGestureChange(gesture) {
         if (isExecuting) return;
         isExecuting = true;
 
         try {
             if (gesture === 0) {
-                // ✊ 0 ngón → Tắt tất cả
                 stopBlinking();
-                setStatusText("✊ 0 ngón → Đang tắt tất cả LED...");
+                setStatusText("0 ngón: Tắt tất cả đèn");
                 for (let i = 1; i <= 4; i++) {
                     ledStates[i] = false;
                     await sendEsp32Command(`/led${i}/off`);
                 }
                 currentLedOn = 0;
                 updateLedIndicators();
-                setStatusText("✊ 0 ngón → Đã tắt tất cả LED");
 
             } else if (gesture === 5) {
-                // 🖐️ 5 ngón → Nhấp nháy tất cả LED
-                setStatusText("🖐️ 5 ngón → Đang nhấp nháy tất cả LED...");
+                setStatusText("5 ngón: Nhấp nháy tất cả đèn");
                 startBlinking();
 
             } else if (gesture >= 1 && gesture <= 4) {
                 stopBlinking();
                 const targetLed = gesture;
-                const icon = targetLed === 1 ? "☝️" : targetLed === 2 ? "✌️" : targetLed === 3 ? "🤟" : "🖐️";
-                
-                setStatusText(`${icon} ${targetLed} ngón → Đang chuyển sang LED ${targetLed}...`);
+                setStatusText(`${targetLed} ngón: Bật Đèn ${targetLed}`);
 
-                // Nếu có 1 LED khác đang bật, tắt LED đó trước
                 if (currentLedOn > 0 && currentLedOn !== targetLed) {
                     ledStates[currentLedOn] = false;
                     await sendEsp32Command(`/led${currentLedOn}/off`);
                 }
 
-                // Bật LED mục tiêu
                 ledStates[targetLed] = true;
                 await sendEsp32Command(`/led${targetLed}/on`);
                 currentLedOn = targetLed;
                 updateLedIndicators();
-
-                setStatusText(`${icon} ${targetLed} ngón → LED ${targetLed} ON`);
             }
-        } catch (err) {
-            console.error("Lỗi chuyển đổi LED theo cử chỉ:", err);
+        } catch (e) {
+            console.error("Lỗi cử chỉ:", e);
         } finally {
-            isExecuting = false;
+            setTimeout(() => { isExecuting = false; }, 250);
         }
     }
 
-    // ==============================================
-    // 5. TỰ ĐỘNG KHỞI CHẠY KHI TẢI TRANG
-    // ==============================================
     window.addEventListener("DOMContentLoaded", () => {
-        // 1. Khởi tạo MediaPipe Hands
         initMediaPipeHands();
-
-        // 2. Khởi tạo Camera
         startCamera();
-
-        // 3. Cập nhật chỉ báo ban đầu
         updateLedIndicators();
     });
-
 </script>
 
 </body>
