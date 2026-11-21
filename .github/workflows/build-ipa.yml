@@ -7,7 +7,7 @@ on:
 
 jobs:
   build-ipa:
-    runs-on: macos-14
+    runs-on: macos-latest
 
     steps:
       - name: Checkout repository
@@ -19,8 +19,8 @@ jobs:
             unzip -o ESP32LED_iOS_Project.zip
           fi
 
-      - name: Select Xcode 15
-        run: sudo xcode-select -s /Applications/Xcode_15.4.app/Contents/Developer
+      - name: Check Xcode version
+        run: xcodebuild -version
 
       - name: Build Archive (Unsigned)
         run: |
