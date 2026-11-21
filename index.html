@@ -474,6 +474,8 @@
         });
     }
 
+    let currentChaserStep = 0;
+
     function stopBlinking() {
         if (isBlinking) {
             isBlinking = false;
@@ -487,35 +489,64 @@
     function startBlinking() {
         if (isBlinking) return;
         isBlinking = true;
+        currentChaserStep = 0;
         sendEsp32Command("/blink");
         runBlinkLoop();
     }
 
     function runBlinkLoop() {
-        let toggle = false;
-        blinkIntervalId = setInterval(() => {
-            if (!isBlinking) {
-                clearInterval(blinkIntervalId);
-                blinkIntervalId = null;
-                return;
-            }
-            toggle = !toggle;
+        // Tắt tất cả đèn trước khi bắt đầu chu kỳ đuổi đèn
+        for (let i = 1; i <= 4; i++) {
+            ledStates[i] = false;
+        }
+        updateLedIndicators();
+
+        async function stepChaser() {
+            if (!isBlinking) return;
+
+            // Xác định đèn hiện tại và đèn trước đó (1 -> 2 -> 3 -> 4)
+            const currLed = currentChaserStep + 1; // 1, 2, 3, 4
+            const prevLed = (currentChaserStep === 0) ? 4 : currentChaserStep; // 4, 1, 2, 3
+
+            // Cập nhật trạng thái đèn trên màn hình
             for (let i = 1; i <= 4; i++) {
-                ledStates[i] = toggle;
+                ledStates[i] = (i === currLed);
             }
             updateLedIndicators();
-        }, 350);
+            setStatusText(`Nhấp nháy: Đèn ${currLed} sáng (500ms)`);
+
+            // Gửi lệnh phần cứng đến ESP32: Tắt đèn trước, bật đèn hiện tại
+            await sendEsp32Command(`/led${prevLed}/off`);
+            await sendEsp32Command(`/led${currLed}/on`);
+
+            // Chuyển sang đèn kế tiếp (1 -> 2 -> 3 -> 4 -> 1)
+            currentChaserStep = (currentChaserStep + 1) % 4;
+        }
+
+        // Chạy ngay bước đầu tiên
+        stepChaser();
+
+        // Lặp lại chính xác mỗi 500ms
+        blinkIntervalId = setInterval(stepChaser, 500);
     }
 
     function manualStartBlinking() {
-        setStatusText("Bật chế độ nhấp nháy đèn");
+        setStatusText("Bật chế độ nhấp nháy theo thứ tự (500ms)");
         setGesturePill("Nhấp nháy (5 ngón)", true);
         startBlinking();
     }
 
     async function ledOn(id) {
         stopBlinking();
+        for (let i = 1; i <= 4; i++) {
+            if (i !== id && ledStates[i]) {
+                ledStates[i] = false;
+                await sendEsp32Command(`/led${i}/off`);
+            }
+        }
         ledStates[id] = true;
+        currentLedOn = id;
+        activeGesture = id;
         updateLedIndicators();
         setStatusText(`Đã bật Đèn ${id}`);
         await sendEsp32Command(`/led${id}/on`);
@@ -524,6 +555,7 @@
     async function ledOff(id) {
         stopBlinking();
         ledStates[id] = false;
+        if (currentLedOn === id) currentLedOn = 0;
         updateLedIndicators();
         setStatusText(`Đã tắt Đèn ${id}`);
         await sendEsp32Command(`/led${id}/off`);
@@ -533,12 +565,13 @@
         stopBlinking();
         for (let i = 1; i <= 4; i++) {
             ledStates[i] = false;
+            await sendEsp32Command(`/led${i}/off`);
         }
         currentLedOn = 0;
+        activeGesture = 0;
         updateLedIndicators();
         setStatusText("Đã tắt tất cả đèn");
         setGesturePill("Tắt hết (0 ngón)", true);
-        await sendEsp32Command("/all/off");
     }
 
     const statusElem = document.getElementById("status");
@@ -681,6 +714,7 @@
 
         const wrist = landmarks[0];
 
+        // Hàm kiểm tra 4 ngón chính (Trỏ, Giữa, Áp út, Út)
         function checkFinger(tipIdx, pipIdx, mcpIdx) {
             const tip = landmarks[tipIdx];
             const pip = landmarks[pipIdx];
@@ -688,13 +722,10 @@
 
             const dTipWrist = dist(tip, wrist);
             const dPipWrist = dist(pip, wrist);
-            const dTipMcp   = dist(tip, mcp);
-            const dPipMcp   = dist(pip, mcp);
 
-            const isUpright = tip.y < pip.y;
-            const isExtended = dTipWrist > dPipWrist * 1.05 && dTipMcp > dPipMcp * 1.05;
-
-            return isExtended || (isUpright && dTipWrist > dPipWrist);
+            // Ngón mở khi đầu ngón xa cổ tay hơn khớp giữa (PIP)
+            // Hoặc trong tư thế ngón hướng lên (tọa độ Y nhỏ hơn)
+            return (dTipWrist > dPipWrist * 1.05) || (tip.y < pip.y && dTipWrist > dPipWrist);
         }
 
         const isIndexOpen  = checkFinger(8, 6, 5);
@@ -702,62 +733,54 @@
         const isRingOpen   = checkFinger(16, 14, 13);
         const isPinkyOpen  = checkFinger(20, 18, 17);
 
-        // Ngón cái tối ưu nhạy cho 4 ngón và 5 ngón
-        const dThumbTipPinky  = dist(landmarks[4], landmarks[17]);
-        const dThumbIpPinky   = dist(landmarks[3], landmarks[17]);
-        const dThumbTipMcp2   = dist(landmarks[4], landmarks[2]);
-        const dThumbIpMcp2    = dist(landmarks[3], landmarks[2]);
-        const dThumbTipMiddle = dist(landmarks[4], landmarks[9]);
+        // Kiểm tra ngón cái (Thumb): Phân biệt chính xác giữa 4 ngón và 5 ngón
         const palmWidth       = dist(landmarks[5], landmarks[17]);
+        const dThumbMiddle    = dist(landmarks[4], landmarks[9]);
+        const dThumbPinkyTip  = dist(landmarks[4], landmarks[17]);
+        const dThumbPinkyIp   = dist(landmarks[3], landmarks[17]);
 
-        const isThumbExtended     = dThumbTipMcp2 > dThumbIpMcp2 * 1.15;
-        const isThumbAwayFromPalm = (dThumbTipPinky > dThumbIpPinky * 0.95) && (dThumbTipMiddle > palmWidth * 0.7);
-        const isThumbWide         = dThumbTipPinky > palmWidth * 1.25;
+        // Ngón cái mở khi vươn ra xa khỏi tâm lòng bàn tay (MCP 9) và không gập sát vào khớp út
+        const isThumbOpen = (dThumbMiddle > palmWidth * 0.75) && 
+                            (dThumbPinkyTip > dThumbPinkyIp * 0.95 || dThumbPinkyTip > palmWidth * 1.15);
 
-        const isThumbOpen = isThumbExtended && (isThumbAwayFromPalm || isThumbWide);
-
-        // 1. Cử chỉ 0 ngón (Nắm tay): 4 ngón chính đều gập
+        // 1. CỬ CHỈ 0 NGÓN (NẮM TAY): Cả 4 ngón chính đều gập
         if (!isIndexOpen && !isMiddleOpen && !isRingOpen && !isPinkyOpen) {
             return 0;
         }
 
-        // 2. Cử chỉ 1 ngón: Chỉ ngón trỏ mở
+        // 2. CỬ CHỈ 1 NGÓN: Chỉ ngón trỏ mở
         if (isIndexOpen && !isMiddleOpen && !isRingOpen && !isPinkyOpen) {
             return 1;
         }
 
-        // 3. Cử chỉ 2 ngón: Ngón trỏ + ngón giữa mở
-        if (isIndexOpen && isMiddleOpen && !isRingOpen && !isPinkyOpen && !isThumbOpen) {
+        // 3. CỬ CHỈ 2 NGÓN (Chữ V / 2 ngón): Ngón trỏ + ngón giữa mở, áp út và út gập
+        if (isIndexOpen && isMiddleOpen && !isRingOpen && !isPinkyOpen) {
             return 2;
         }
 
-        // 4. Cử chỉ 3 ngón:
-        if (
-            (isIndexOpen && isMiddleOpen && isRingOpen && !isPinkyOpen) ||
-            (isThumbOpen && isIndexOpen && isMiddleOpen && !isRingOpen && !isPinkyOpen) ||
-            (isThumbOpen && isIndexOpen && isPinkyOpen && !isMiddleOpen && !isRingOpen)
-        ) {
+        // 4. CỬ CHỈ 3 NGÓN: Ngón trỏ + ngón giữa + ngón áp út mở, ngón út gập
+        if (isIndexOpen && isMiddleOpen && isRingOpen && !isPinkyOpen) {
             return 3;
         }
 
-        // 5. Cử chỉ 4 ngón: 4 ngón chính mở, ngón cái gập
-        if (isIndexOpen && isMiddleOpen && isRingOpen && isPinkyOpen && !isThumbOpen) {
-            return 4;
+        // 5. CỬ CHỈ 4 NGÓN HOẶC 5 NGÓN: Cả 4 ngón chính đều mở
+        if (isIndexOpen && isMiddleOpen && isRingOpen && isPinkyOpen) {
+            // Ngón cái xòe ra -> 5 ngón (Nhấp nháy đèn)
+            // Ngón cái gập vào lòng bàn tay -> 4 ngón (Bật Đèn 4)
+            return isThumbOpen ? 5 : 4;
         }
 
-        // 6. Cử chỉ 5 ngón: Cả 5 ngón mở xòe
-        if (isIndexOpen && isMiddleOpen && isRingOpen && isPinkyOpen && isThumbOpen) {
-            return 5;
-        }
-
-        let total = 0;
-        if (isThumbOpen) total++;
-        if (isIndexOpen) total++;
-        if (isMiddleOpen) total++;
-        if (isRingOpen) total++;
-        if (isPinkyOpen) total++;
-        return total;
+        // Fallback: Tổng số ngón đang mở
+        let count = 0;
+        if (isIndexOpen) count++;
+        if (isMiddleOpen) count++;
+        if (isRingOpen) count++;
+        if (isPinkyOpen) count++;
+        if (isThumbOpen) count++;
+        return count;
     }
+
+    let noHandCount = 0;
 
     function onHandResults(results) {
         if (!video.videoWidth || !video.videoHeight) return;
@@ -769,6 +792,7 @@
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+            noHandCount = 0;
             const landmarks = results.multiHandLandmarks[0];
 
             if (typeof drawConnectors === "function" && typeof HAND_CONNECTIONS !== "undefined") {
@@ -782,8 +806,12 @@
             processGestureWithFilter(rawCount);
 
         } else {
-            gestureHistory.length = 0;
-            setGesturePill("Đang chờ bàn tay...", false);
+            noHandCount++;
+            // Chỉ xóa bộ đệm sau khi mất dấu tay liên tục 15 frame (~0.5 giây)
+            if (noHandCount > 15) {
+                gestureHistory.length = 0;
+                setGesturePill("Đang chờ bàn tay...", false);
+            }
         }
 
         ctx.restore();
@@ -848,7 +876,7 @@
                 updateLedIndicators();
 
             } else if (gesture === 5) {
-                setStatusText("5 ngón: Nhấp nháy tất cả đèn");
+                setStatusText("5 ngón: Nhấp nháy theo thứ tự (500ms)");
                 startBlinking();
 
             } else if (gesture >= 1 && gesture <= 4) {
@@ -856,9 +884,11 @@
                 const targetLed = gesture;
                 setStatusText(`${targetLed} ngón: Bật Đèn ${targetLed}`);
 
-                if (currentLedOn > 0 && currentLedOn !== targetLed) {
-                    ledStates[currentLedOn] = false;
-                    await sendEsp32Command(`/led${currentLedOn}/off`);
+                for (let i = 1; i <= 4; i++) {
+                    if (i !== targetLed && ledStates[i]) {
+                        ledStates[i] = false;
+                        await sendEsp32Command(`/led${i}/off`);
+                    }
                 }
 
                 ledStates[targetLed] = true;
