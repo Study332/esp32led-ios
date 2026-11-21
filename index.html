@@ -5,11 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Điều Khiển Đèn ESP32</title>
 
-    <!-- Thư viện MediaPipe Hands CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+    <!-- Thư viện MediaPipe Hands: Ưu tiên tải cục bộ siêu nhanh, tự động dự phòng sang CDN -->
+    <script src="mediapipe/camera_utils.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js'"></script>
+    <script src="mediapipe/control_utils.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js'"></script>
+    <script src="mediapipe/drawing_utils.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js'"></script>
+    <script src="mediapipe/hands.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js'"></script>
 
     <style>
         * {
@@ -423,8 +423,8 @@
             <video id="webcam" autoplay playsinline muted></video>
             <canvas id="output_canvas"></canvas>
             <div class="camera-badge" id="camera-badge">
-                <span class="camera-dot"></span>
-                <span>Camera đang bật</span>
+                <span class="camera-dot" id="camera-dot"></span>
+                <span id="camera-badge-text">Camera đang bật</span>
             </div>
         </div>
 
@@ -555,10 +555,8 @@
             await sendEsp32Command(`/led${i}/on`);
         }
         currentLedOn = 5;
-        activeGesture = 5;
         updateLedIndicators();
         setStatusText("Đã bật tất cả 4 đèn");
-        setGesturePill("5 ngón (Bật cả 4 đèn)", true);
     }
 
     async function ledOn(id) {
@@ -571,7 +569,6 @@
         }
         ledStates[id] = true;
         currentLedOn = id;
-        activeGesture = id;
         updateLedIndicators();
         setStatusText(`Đã bật Đèn ${id}`);
         await sendEsp32Command(`/led${id}/on`);
@@ -593,10 +590,8 @@
             await sendEsp32Command(`/led${i}/off`);
         }
         currentLedOn = 0;
-        activeGesture = 0;
         updateLedIndicators();
         setStatusText("Đã tắt tất cả đèn");
-        setGesturePill("Tắt hết (0 ngón)", true);
     }
 
     const statusElem = document.getElementById("status");
@@ -617,6 +612,13 @@
         }
     }
 
+    function setCameraBadge(text, dotColor) {
+        const textElem = document.getElementById("camera-badge-text");
+        const dotElem = document.getElementById("camera-dot");
+        if (textElem && text) textElem.innerText = text;
+        if (dotElem && dotColor) dotElem.style.backgroundColor = dotColor;
+    }
+
     const video = document.getElementById("webcam");
     const canvas = document.getElementById("output_canvas");
     const ctx = canvas.getContext("2d");
@@ -625,16 +627,20 @@
     let isCameraRunning = false;
     let currentFacingMode = "user";
     let hands = null;
+    let isMediaPipeReady = false;
+    let isInitializingHands = false;
     let isProcessingFrame = false;
 
     async function startCamera() {
         cameraErrorBox.style.display = "none";
         setStatusText("Đang xin quyền mở camera...");
+        setCameraBadge("Đang mở camera...", "#f59e0b");
 
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
             cameraErrorBox.style.display = "block";
             cameraErrorBox.innerHTML = "Trình duyệt chưa cấp quyền camera hoặc không hỗ trợ.";
             setStatusText("Không mở được camera");
+            setCameraBadge("Lỗi camera", "#ef4444");
             return;
         }
 
@@ -670,7 +676,14 @@
             await video.play();
 
             isCameraRunning = true;
-            setStatusText("Camera đang chạy. Hãy đưa tay vào khung hình.");
+            if (isMediaPipeReady) {
+                setCameraBadge("Camera & AI sẵn sàng", "#22c55e");
+                setStatusText("AI nhận diện: Sẵn sàng! Đưa bàn tay vào khung hình.");
+            } else {
+                setCameraBadge("Camera bật. Đang nạp AI...", "#f59e0b");
+                setStatusText("Camera đang chạy. Đang nạp AI nhận diện...");
+                initMediaPipeHands();
+            }
             requestAnimationFrame(processVideoFrame);
 
         } catch (error) {
@@ -678,11 +691,15 @@
             cameraErrorBox.style.display = "block";
             cameraErrorBox.innerHTML = "Không thể truy cập camera. Vui lòng cấp quyền camera trong cài đặt.";
             setStatusText("Lỗi quyền camera");
+            setCameraBadge("Lỗi quyền camera", "#ef4444");
         }
     }
 
     function restartCamera() {
         startCamera();
+        if (!isMediaPipeReady) {
+            initMediaPipeHands();
+        }
     }
 
     function switchFacingMode() {
@@ -690,15 +707,22 @@
         startCamera();
     }
 
-    function initMediaPipeHands() {
+    async function initMediaPipeHands() {
+        if (isMediaPipeReady && hands) return true;
+        if (isInitializingHands) return false;
+
         if (typeof Hands === "undefined") {
-            console.warn("MediaPipe Hands chưa tải được từ CDN.");
+            setCameraBadge("Đang tải AI...", "#f59e0b");
             return false;
         }
 
+        isInitializingHands = true;
+        setCameraBadge("Nạp mô hình AI...", "#3b82f6");
+
         try {
+            // Ưu tiên nạp từ thư mục mediapipe/ cục bộ (chạy offline siêu tốc)
             hands = new Hands({
-                locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+                locateFile: (file) => "mediapipe/" + file
             });
 
             hands.setOptions({
@@ -709,22 +733,59 @@
             });
 
             hands.onResults(onHandResults);
+            await hands.initialize();
+
+            isMediaPipeReady = true;
+            isInitializingHands = false;
+            setCameraBadge("Camera & AI sẵn sàng", "#22c55e");
+            setStatusText("AI cử chỉ: Sẵn sàng! Hãy đưa bàn tay vào khung hình.");
             return true;
-        } catch (err) {
-            console.error("Lỗi khởi tạo Hands:", err);
-            return false;
+        } catch (localErr) {
+            console.warn("Nạp mediapipe cục bộ chưa thành công, thử dùng CDN:", localErr);
+            try {
+                hands = new Hands({
+                    locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+                });
+
+                hands.setOptions({
+                    maxNumHands: 1,
+                    modelComplexity: 0,
+                    minDetectionConfidence: 0.5,
+                    minTrackingConfidence: 0.5
+                });
+
+                hands.onResults(onHandResults);
+                await hands.initialize();
+
+                isMediaPipeReady = true;
+                isInitializingHands = false;
+                setCameraBadge("Camera & AI sẵn sàng (CDN)", "#22c55e");
+                setStatusText("AI cử chỉ: Sẵn sàng (CDN)! Hãy đưa tay vào khung hình.");
+                return true;
+            } catch (cdnErr) {
+                console.error("Lỗi khởi tạo MediaPipe:", cdnErr);
+                isInitializingHands = false;
+                setCameraBadge("Lỗi tải AI cử chỉ", "#ef4444");
+                setStatusText("Lỗi tải mô hình AI cử chỉ. Vui lòng thử lại.");
+                return false;
+            }
         }
     }
 
     async function processVideoFrame() {
         if (!isCameraRunning) return;
 
-        if (video.readyState >= 2 && !isProcessingFrame && hands && video.videoWidth > 0) {
+        // Tự động kích hoạt nạp mô hình AI nếu chưa sẵn sàng
+        if (!isMediaPipeReady && !isInitializingHands && typeof Hands !== "undefined") {
+            initMediaPipeHands();
+        }
+
+        if (video.readyState >= 2 && !isProcessingFrame && hands && isMediaPipeReady && video.videoWidth > 0) {
             isProcessingFrame = true;
             try {
                 await hands.send({ image: video });
             } catch (err) {
-                console.error("Lỗi MediaPipe:", err);
+                console.error("Lỗi xử lý khung hình:", err);
             }
             isProcessingFrame = false;
         }
@@ -739,7 +800,7 @@
 
         const wrist = landmarks[0];
 
-        // Hàm kiểm tra 4 ngón chính (Trỏ, Giữa, Áp út, Út)
+        // 4 ngón dài: Trỏ (8), Giữa (12), Áp út (16), Út (20)
         function checkFinger(tipIdx, pipIdx, mcpIdx) {
             const tip = landmarks[tipIdx];
             const pip = landmarks[pipIdx];
@@ -747,10 +808,15 @@
 
             const dTipWrist = dist(tip, wrist);
             const dPipWrist = dist(pip, wrist);
+            const dTipMcp   = dist(tip, mcp);
+            const dPipMcp   = dist(pip, mcp);
 
-            // Ngón mở khi đầu ngón xa cổ tay hơn khớp giữa (PIP)
-            // Hoặc trong tư thế ngón hướng lên (tọa độ Y nhỏ hơn)
-            return (dTipWrist > dPipWrist * 1.05) || (tip.y < pip.y && dTipWrist > dPipWrist);
+            // Ngón mở khi đầu ngón duỗi xa khớp gốc mcp và xa cổ tay hơn khớp giữa
+            const isExtended = (dTipMcp > dPipMcp * 1.1) && (dTipWrist > dPipWrist);
+            // Cũng hỗ trợ trường hợp ngón hướng thẳng đứng lên trên
+            const isPointedUp = (tip.y < pip.y) && (dTipWrist > dPipWrist * 0.95);
+
+            return isExtended || isPointedUp;
         }
 
         const isIndexOpen  = checkFinger(8, 6, 5);
@@ -758,17 +824,17 @@
         const isRingOpen   = checkFinger(16, 14, 13);
         const isPinkyOpen  = checkFinger(20, 18, 17);
 
-        // Kiểm tra ngón cái (Thumb): Phân biệt chính xác giữa 4 ngón và 5 ngón
-        const palmWidth       = dist(landmarks[5], landmarks[17]);
-        const dThumbMiddle    = dist(landmarks[4], landmarks[9]);
-        const dThumbPinkyTip  = dist(landmarks[4], landmarks[17]);
-        const dThumbPinkyIp   = dist(landmarks[3], landmarks[17]);
+        // Ngón cái (Thumb): 4 (tip), 3 (IP), 2 (MCP), 1 (CMC)
+        const palmWidth     = dist(landmarks[5], landmarks[17]);
+        const dThumbMiddle  = dist(landmarks[4], landmarks[9]);
+        const dThumbPinky   = dist(landmarks[4], landmarks[17]);
+        const dThumbMcp     = dist(landmarks[4], landmarks[2]);
+        const dIpMcp        = dist(landmarks[3], landmarks[2]);
 
-        // Ngón cái mở khi vươn ra xa khỏi tâm lòng bàn tay (MCP 9) và không gập sát vào khớp út
-        const isThumbOpen = (dThumbMiddle > palmWidth * 0.75) && 
-                            (dThumbPinkyTip > dThumbPinkyIp * 0.95 || dThumbPinkyTip > palmWidth * 1.15);
+        // Ngón cái mở khi vươn ra khỏi lòng bàn tay
+        const isThumbOpen = (dThumbMiddle > palmWidth * 0.72) && (dThumbMcp > dIpMcp * 1.05);
 
-        // 1. CỬ CHỈ 0 NGÓN (NẮM TAY): Cả 4 ngón chính đều gập
+        // 1. CỬ CHỈ 0 NGÓN (NẮM TAY): Cả 4 ngón dài đều gập
         if (!isIndexOpen && !isMiddleOpen && !isRingOpen && !isPinkyOpen) {
             return 0;
         }
@@ -778,21 +844,26 @@
             return 1;
         }
 
-        // 3. CỬ CHỈ 2 NGÓN (Chữ V / 2 ngón): Ngón trỏ + ngón giữa mở, áp út và út gập
+        // 3. CỬ CHỈ 2 NGÓN: Ngón trỏ + ngón giữa mở (chữ V), 2 ngón còn lại gập
         if (isIndexOpen && isMiddleOpen && !isRingOpen && !isPinkyOpen) {
             return 2;
         }
 
-        // 4. CỬ CHỈ 3 NGÓN: Ngón trỏ + ngón giữa + ngón áp út mở, ngón út gập
+        // 4. CỬ CHỈ 3 NGÓN: Ngón trỏ + giữa + áp út mở, ngón út gập
         if (isIndexOpen && isMiddleOpen && isRingOpen && !isPinkyOpen) {
             return 3;
         }
 
-        // 5. CỬ CHỈ 4 NGÓN HOẶC 5 NGÓN: Cả 4 ngón chính đều mở
+        // 5. CỬ CHỈ 4 NGÓN hoặc 5 NGÓN:
         if (isIndexOpen && isMiddleOpen && isRingOpen && isPinkyOpen) {
-            // Ngón cái xòe ra -> 5 ngón (Nhấp nháy đèn)
+            // Ngón cái xòe ra -> 5 ngón (Bật cả 4 đèn)
             // Ngón cái gập vào lòng bàn tay -> 4 ngón (Bật Đèn 4)
             return isThumbOpen ? 5 : 4;
+        }
+
+        // Nếu ngón cái mở cùng ít nhất 3 ngón chính khác -> nhận diện 5 ngón
+        if (isThumbOpen && isIndexOpen && isMiddleOpen && (isRingOpen || isPinkyOpen)) {
+            return 5;
         }
 
         // Fallback: Tổng số ngón đang mở
@@ -832,7 +903,7 @@
 
         } else {
             noHandCount++;
-            // Chỉ xóa bộ đệm sau khi mất dấu tay liên tục 15 frame (~0.5 giây)
+            // Chỉ chuyển sang trạng thái chờ sau khi mất dấu tay 15 frame liên tục
             if (noHandCount > 15) {
                 gestureHistory.length = 0;
                 setGesturePill("Đang chờ bàn tay...", false);
@@ -892,7 +963,7 @@
         try {
             if (gesture === 0) {
                 stopBlinking();
-                setStatusText("0 ngón: Tắt tất cả đèn");
+                setStatusText("Cử chỉ: Nắm tay (Tắt tất cả đèn)");
                 for (let i = 1; i <= 4; i++) {
                     ledStates[i] = false;
                     await sendEsp32Command(`/led${i}/off`);
@@ -902,7 +973,7 @@
 
             } else if (gesture === 5) {
                 stopBlinking();
-                setStatusText("5 ngón: Bật sáng cả 4 đèn");
+                setStatusText("Cử chỉ: 5 ngón (Bật cả 4 đèn)");
                 for (let i = 1; i <= 4; i++) {
                     ledStates[i] = true;
                     await sendEsp32Command(`/led${i}/on`);
@@ -913,7 +984,7 @@
             } else if (gesture >= 1 && gesture <= 4) {
                 stopBlinking();
                 const targetLed = gesture;
-                setStatusText(`${targetLed} ngón: Bật Đèn ${targetLed}`);
+                setStatusText(`Cử chỉ: ${targetLed} ngón (Bật Đèn ${targetLed})`);
 
                 for (let i = 1; i <= 4; i++) {
                     if (i !== targetLed && ledStates[i]) {
@@ -935,9 +1006,15 @@
     }
 
     window.addEventListener("DOMContentLoaded", () => {
+        updateLedIndicators();
         initMediaPipeHands();
         startCamera();
-        updateLedIndicators();
+    });
+
+    window.addEventListener("load", () => {
+        if (!isMediaPipeReady) {
+            initMediaPipeHands();
+        }
     });
 </script>
 
