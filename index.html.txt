@@ -181,13 +181,13 @@
         }
 
         .btn-blink {
-            background-color: #d97706;
+            background-color: #2563eb;
             color: #ffffff;
             padding: 9px;
             font-size: 13px;
             text-align: center;
         }
-        .btn-blink:hover { background-color: #b45309; }
+        .btn-blink:hover { background-color: #1d4ed8; }
 
         .btn-all-off {
             background-color: #475569;
@@ -410,7 +410,7 @@
         </div>
 
         <div class="all-actions">
-            <button class="btn btn-blink" onclick="manualStartBlinking()">Nhấp nháy tất cả</button>
+            <button class="btn btn-blink" onclick="allOn()">Bật cả 4 đèn</button>
             <button class="btn btn-all-off" onclick="allOff()">Tắt tất cả đèn</button>
         </div>
     </div>
@@ -453,7 +453,7 @@
                 <div>• <b>2 ngón</b>: Bật Đèn 2</div>
                 <div>• <b>3 ngón</b>: Bật Đèn 3</div>
                 <div>• <b>4 ngón</b>: Bật Đèn 4</div>
-                <div>• <b>5 ngón</b>: Nhấp nháy tất cả</div>
+                <div>• <b>5 ngón</b>: Bật cả 4 đèn</div>
                 <div>• <b>Nắm tay (0 ngón)</b>: Tắt hết</div>
             </div>
         </div>
@@ -548,10 +548,17 @@
         blinkIntervalId = setInterval(stepChaser, 500);
     }
 
-    function manualStartBlinking() {
-        setStatusText("Bật chế độ nhấp nháy theo thứ tự (500ms)");
-        setGesturePill("Nhấp nháy (5 ngón)", true);
-        startBlinking();
+    async function allOn() {
+        stopBlinking();
+        for (let i = 1; i <= 4; i++) {
+            ledStates[i] = true;
+            await sendEsp32Command(`/led${i}/on`);
+        }
+        currentLedOn = 5;
+        activeGesture = 5;
+        updateLedIndicators();
+        setStatusText("Đã bật tất cả 4 đèn");
+        setGesturePill("5 ngón (Bật cả 4 đèn)", true);
     }
 
     async function ledOn(id) {
@@ -867,7 +874,7 @@
             2: "2 ngón (Đèn 2)",
             3: "3 ngón (Đèn 3)",
             4: "4 ngón (Đèn 4)",
-            5: "5 ngón (Nhấp nháy)"
+            5: "5 ngón (Bật cả 4 đèn)"
         };
 
         setGesturePill(labelMap[bestGesture] || `${bestGesture} ngón`, true);
@@ -894,8 +901,14 @@
                 updateLedIndicators();
 
             } else if (gesture === 5) {
-                setStatusText("5 ngón: Nhấp nháy theo thứ tự (500ms)");
-                startBlinking();
+                stopBlinking();
+                setStatusText("5 ngón: Bật sáng cả 4 đèn");
+                for (let i = 1; i <= 4; i++) {
+                    ledStates[i] = true;
+                    await sendEsp32Command(`/led${i}/on`);
+                }
+                currentLedOn = 5;
+                updateLedIndicators();
 
             } else if (gesture >= 1 && gesture <= 4) {
                 stopBlinking();
