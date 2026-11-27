@@ -71,6 +71,32 @@
             font-weight: 500;
         }
 
+        /* Ô nhập địa chỉ ESP32-C6 nhỏ gọn ở góc trên */
+        .top-host-bar {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 6px;
+            font-size: 11px;
+            color: #64748b;
+        }
+
+        .top-host-input {
+            width: 175px;
+            padding: 4px 8px;
+            font-size: 11px;
+            color: #1e293b;
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            outline: none;
+            transition: border-color 0.15s ease;
+        }
+
+        .top-host-input:focus {
+            border-color: #2563eb;
+        }
+
         /* Khung thẻ chức năng */
         .card {
             background: #ffffff;
@@ -120,9 +146,21 @@
             transition: all 0.2s ease;
         }
 
-        .status-dot.active {
+        .status-dot.active.led-1 {
+            background-color: #ef4444;
+            box-shadow: 0 0 8px rgba(239, 68, 68, 0.7);
+        }
+        .status-dot.active.led-2 {
+            background-color: #eab308;
+            box-shadow: 0 0 8px rgba(234, 179, 8, 0.7);
+        }
+        .status-dot.active.led-3 {
             background-color: #16a34a;
-            box-shadow: 0 0 6px rgba(22, 163, 74, 0.6);
+            box-shadow: 0 0 8px rgba(22, 163, 74, 0.7);
+        }
+        .status-dot.active.led-4 {
+            background-color: #2563eb;
+            box-shadow: 0 0 8px rgba(37, 99, 235, 0.7);
         }
 
         .led-name {
@@ -158,10 +196,17 @@
         }
 
         .btn-on {
+            background-color: #dcfce7;
+            color: #15803d;
+            border: 1px solid #86efac;
+        }
+        .btn-on:hover { background-color: #bbf7d0; }
+        .btn-on.is-active {
             background-color: #16a34a;
             color: #ffffff;
+            border-color: #15803d;
+            box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.25);
         }
-        .btn-on:hover { background-color: #15803d; }
 
         .btn-off {
             background-color: #ffffff;
@@ -169,6 +214,12 @@
             border: 1px solid #fca5a5;
         }
         .btn-off:hover { background-color: #fef2f2; }
+        .btn-off.is-active {
+            background-color: #dc2626;
+            color: #ffffff;
+            border-color: #b91c1c;
+            box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.2);
+        }
 
         /* Nút chức năng chung */
         .all-actions {
@@ -349,6 +400,11 @@
 
 <div class="container">
 
+    <div class="top-host-bar">
+        <label for="esp32-host" title="Wi-Fi AP: nhom3 | MK: 88888888">ESP32-C6:</label>
+        <input type="text" id="esp32-host" class="top-host-input" value="http://192.168.4.1" placeholder="http://192.168.4.1 hoặc http://esp32led.local">
+    </div>
+
     <header>
         <h1>Điều Khiển Đèn ESP32</h1>
         <p>Bật tắt bằng nút bấm hoặc cử chỉ bàn tay</p>
@@ -362,49 +418,49 @@
         <div class="led-list">
             <div class="led-row">
                 <div class="led-info">
-                    <span class="status-dot" id="dot-1"></span>
-                    <span class="led-name">Đèn 1</span>
-                    <span class="led-pin">(GPIO 25)</span>
+                    <span class="status-dot led-1" id="dot-1"></span>
+                    <span class="led-name">LED 1 (Đỏ)</span>
+                    <span class="led-pin">(GPIO 4)</span>
                 </div>
                 <div class="btn-pair">
-                    <button class="btn btn-on" onclick="ledOn(1)">Bật</button>
-                    <button class="btn btn-off" onclick="ledOff(1)">Tắt</button>
+                    <button class="btn btn-on" id="btn-on-1" onclick="ledOn(1)">Bật</button>
+                    <button class="btn btn-off is-active" id="btn-off-1" onclick="ledOff(1)">Tắt</button>
                 </div>
             </div>
 
             <div class="led-row">
                 <div class="led-info">
-                    <span class="status-dot" id="dot-2"></span>
-                    <span class="led-name">Đèn 2</span>
-                    <span class="led-pin">(GPIO 26)</span>
+                    <span class="status-dot led-2" id="dot-2"></span>
+                    <span class="led-name">LED 2 (Vàng)</span>
+                    <span class="led-pin">(GPIO 5)</span>
                 </div>
                 <div class="btn-pair">
-                    <button class="btn btn-on" onclick="ledOn(2)">Bật</button>
-                    <button class="btn btn-off" onclick="ledOff(2)">Tắt</button>
+                    <button class="btn btn-on" id="btn-on-2" onclick="ledOn(2)">Bật</button>
+                    <button class="btn btn-off is-active" id="btn-off-2" onclick="ledOff(2)">Tắt</button>
                 </div>
             </div>
 
             <div class="led-row">
                 <div class="led-info">
-                    <span class="status-dot" id="dot-3"></span>
-                    <span class="led-name">Đèn 3</span>
-                    <span class="led-pin">(GPIO 27)</span>
+                    <span class="status-dot led-3" id="dot-3"></span>
+                    <span class="led-name">LED 3 (Xanh lá)</span>
+                    <span class="led-pin">(GPIO 6)</span>
                 </div>
                 <div class="btn-pair">
-                    <button class="btn btn-on" onclick="ledOn(3)">Bật</button>
-                    <button class="btn btn-off" onclick="ledOff(3)">Tắt</button>
+                    <button class="btn btn-on" id="btn-on-3" onclick="ledOn(3)">Bật</button>
+                    <button class="btn btn-off is-active" id="btn-off-3" onclick="ledOff(3)">Tắt</button>
                 </div>
             </div>
 
             <div class="led-row">
                 <div class="led-info">
-                    <span class="status-dot" id="dot-4"></span>
-                    <span class="led-name">Đèn 4</span>
-                    <span class="led-pin">(GPIO 32)</span>
+                    <span class="status-dot led-4" id="dot-4"></span>
+                    <span class="led-name">LED 4 (Xanh dương)</span>
+                    <span class="led-pin">(GPIO 7)</span>
                 </div>
                 <div class="btn-pair">
-                    <button class="btn btn-on" onclick="ledOn(4)">Bật</button>
-                    <button class="btn btn-off" onclick="ledOff(4)">Tắt</button>
+                    <button class="btn btn-on" id="btn-on-4" onclick="ledOn(4)">Bật</button>
+                    <button class="btn btn-off is-active" id="btn-off-4" onclick="ledOff(4)">Tắt</button>
                 </div>
             </div>
         </div>
@@ -462,7 +518,17 @@
 </div>
 
 <script>
-    const ESP32_IP = "192.168.4.1";
+    const DEFAULT_ESP32_URL = "http://192.168.4.1";
+
+    function getEsp32BaseUrl() {
+        const input = document.getElementById("esp32-host");
+        let raw = (input ? input.value : "").trim();
+        if (!raw) raw = DEFAULT_ESP32_URL;
+        if (!/^https?:\/\//i.test(raw)) {
+            raw = "http://" + raw;
+        }
+        return raw.replace(/\/+$/, "");
+    }
 
     const ledStates = { 1: false, 2: false, 3: false, 4: false };
     let isBlinking = false;
@@ -471,25 +537,38 @@
     function updateLedIndicators() {
         for (let i = 1; i <= 4; i++) {
             const dot = document.getElementById(`dot-${i}`);
+            const btnOn = document.getElementById(`btn-on-${i}`);
+            const btnOff = document.getElementById(`btn-off-${i}`);
+            const isOn = !!ledStates[i];
+
             if (dot) {
-                if (ledStates[i]) {
-                    dot.classList.add("active");
-                } else {
-                    dot.classList.remove("active");
-                }
+                dot.classList.toggle("active", isOn);
+            }
+            if (btnOn) {
+                btnOn.classList.toggle("is-active", isOn);
+            }
+            if (btnOff) {
+                btnOff.classList.toggle("is-active", !isOn);
             }
         }
     }
 
-    function sendEsp32Command(path) {
-        const url = `http://${ESP32_IP}${path}`;
-        return fetch(url, {
-            method: "GET",
-            mode: "no-cors",
-            cache: "no-store"
-        }).catch(err => {
-            console.log("Gửi lệnh ESP32:", path);
-        });
+    async function sendEsp32Command(path) {
+        const url = `${getEsp32BaseUrl()}${path}`;
+        try {
+            const response = await fetch(url, {
+                method: "GET",
+                cache: "no-store"
+            });
+            if (response.status === 200 || response.ok) {
+                return true;
+            }
+            console.warn("ESP32 phản hồi lỗi:", response.status, url);
+            return false;
+        } catch (err) {
+            console.error("Không kết nối được ESP32:", url, err);
+            return false;
+        }
     }
 
     let currentChaserStep = 0;
@@ -526,16 +605,17 @@
             const currLed = currentChaserStep + 1; // 1, 2, 3, 4
             const prevLed = (currentChaserStep === 0) ? 4 : currentChaserStep; // 4, 1, 2, 3
 
-            // Cập nhật trạng thái đèn trên màn hình
-            for (let i = 1; i <= 4; i++) {
-                ledStates[i] = (i === currLed);
-            }
-            updateLedIndicators();
-            setStatusText(`Nhấp nháy: Đèn ${currLed} sáng (500ms)`);
-
             // Gửi lệnh phần cứng đến ESP32: Tắt đèn trước, bật đèn hiện tại
-            await sendEsp32Command(`/led${prevLed}/off`);
-            await sendEsp32Command(`/led${currLed}/on`);
+            const offOk = await sendEsp32Command(`/led${prevLed}/off`);
+            const onOk = await sendEsp32Command(`/led${currLed}/on`);
+
+            if (offOk || onOk) {
+                for (let i = 1; i <= 4; i++) {
+                    ledStates[i] = (i === currLed);
+                }
+                updateLedIndicators();
+                setStatusText(`Nhấp nháy: Đèn ${currLed} sáng (500ms)`);
+            }
 
             // Chuyển sang đèn kế tiếp (1 -> 2 -> 3 -> 4 -> 1)
             currentChaserStep = (currentChaserStep + 1) % 4;
@@ -550,48 +630,58 @@
 
     async function allOn() {
         stopBlinking();
-        for (let i = 1; i <= 4; i++) {
-            ledStates[i] = true;
-            await sendEsp32Command(`/led${i}/on`);
+        const ok = await sendEsp32Command("/all/on");
+        if (ok) {
+            for (let i = 1; i <= 4; i++) {
+                ledStates[i] = true;
+            }
+            currentLedOn = 5;
+            updateLedIndicators();
+            setStatusText("Đã bật tất cả 4 đèn (200 OK)");
+        } else {
+            setStatusText("Lỗi kết nối ESP32-C6 khi bật tất cả đèn");
         }
-        currentLedOn = 5;
-        updateLedIndicators();
-        setStatusText("Đã bật tất cả 4 đèn");
     }
 
     async function ledOn(id) {
         stopBlinking();
-        for (let i = 1; i <= 4; i++) {
-            if (i !== id && ledStates[i]) {
-                ledStates[i] = false;
-                await sendEsp32Command(`/led${i}/off`);
-            }
+        const ok = await sendEsp32Command(`/led${id}/on`);
+        if (ok) {
+            ledStates[id] = true;
+            currentLedOn = id;
+            updateLedIndicators();
+            setStatusText(`Đã bật Đèn ${id} (200 OK)`);
+        } else {
+            setStatusText(`Lỗi kết nối ESP32-C6 khi bật Đèn ${id}`);
         }
-        ledStates[id] = true;
-        currentLedOn = id;
-        updateLedIndicators();
-        setStatusText(`Đã bật Đèn ${id}`);
-        await sendEsp32Command(`/led${id}/on`);
     }
 
     async function ledOff(id) {
         stopBlinking();
-        ledStates[id] = false;
-        if (currentLedOn === id) currentLedOn = 0;
-        updateLedIndicators();
-        setStatusText(`Đã tắt Đèn ${id}`);
-        await sendEsp32Command(`/led${id}/off`);
+        const ok = await sendEsp32Command(`/led${id}/off`);
+        if (ok) {
+            ledStates[id] = false;
+            if (currentLedOn === id) currentLedOn = 0;
+            updateLedIndicators();
+            setStatusText(`Đã tắt Đèn ${id} (200 OK)`);
+        } else {
+            setStatusText(`Lỗi kết nối ESP32-C6 khi tắt Đèn ${id}`);
+        }
     }
 
     async function allOff() {
         stopBlinking();
-        for (let i = 1; i <= 4; i++) {
-            ledStates[i] = false;
-            await sendEsp32Command(`/led${i}/off`);
+        const ok = await sendEsp32Command("/all/off");
+        if (ok) {
+            for (let i = 1; i <= 4; i++) {
+                ledStates[i] = false;
+            }
+            currentLedOn = 0;
+            updateLedIndicators();
+            setStatusText("Đã tắt tất cả đèn (200 OK)");
+        } else {
+            setStatusText("Lỗi kết nối ESP32-C6 khi tắt tất cả đèn");
         }
-        currentLedOn = 0;
-        updateLedIndicators();
-        setStatusText("Đã tắt tất cả đèn");
     }
 
     const statusElem = document.getElementById("status");
@@ -963,40 +1053,52 @@
         try {
             if (gesture === 0) {
                 stopBlinking();
-                setStatusText("Cử chỉ: Nắm tay (Tắt tất cả đèn)");
-                for (let i = 1; i <= 4; i++) {
-                    ledStates[i] = false;
-                    await sendEsp32Command(`/led${i}/off`);
+                const ok = await sendEsp32Command("/all/off");
+                if (ok) {
+                    for (let i = 1; i <= 4; i++) {
+                        ledStates[i] = false;
+                    }
+                    currentLedOn = 0;
+                    updateLedIndicators();
+                    setStatusText("Cử chỉ: Nắm tay (Tắt tất cả đèn - 200 OK)");
+                } else {
+                    setStatusText("Cử chỉ 0 ngón: Lỗi kết nối ESP32-C6");
                 }
-                currentLedOn = 0;
-                updateLedIndicators();
 
             } else if (gesture === 5) {
                 stopBlinking();
-                setStatusText("Cử chỉ: 5 ngón (Bật cả 4 đèn)");
-                for (let i = 1; i <= 4; i++) {
-                    ledStates[i] = true;
-                    await sendEsp32Command(`/led${i}/on`);
+                const ok = await sendEsp32Command("/all/on");
+                if (ok) {
+                    for (let i = 1; i <= 4; i++) {
+                        ledStates[i] = true;
+                    }
+                    currentLedOn = 5;
+                    updateLedIndicators();
+                    setStatusText("Cử chỉ: 5 ngón (Bật cả 4 đèn - 200 OK)");
+                } else {
+                    setStatusText("Cử chỉ 5 ngón: Lỗi kết nối ESP32-C6");
                 }
-                currentLedOn = 5;
-                updateLedIndicators();
 
             } else if (gesture >= 1 && gesture <= 4) {
                 stopBlinking();
                 const targetLed = gesture;
-                setStatusText(`Cử chỉ: ${targetLed} ngón (Bật Đèn ${targetLed})`);
 
                 for (let i = 1; i <= 4; i++) {
                     if (i !== targetLed && ledStates[i]) {
-                        ledStates[i] = false;
-                        await sendEsp32Command(`/led${i}/off`);
+                        const offOk = await sendEsp32Command(`/led${i}/off`);
+                        if (offOk) ledStates[i] = false;
                     }
                 }
 
-                ledStates[targetLed] = true;
-                await sendEsp32Command(`/led${targetLed}/on`);
-                currentLedOn = targetLed;
-                updateLedIndicators();
+                const onOk = await sendEsp32Command(`/led${targetLed}/on`);
+                if (onOk) {
+                    ledStates[targetLed] = true;
+                    currentLedOn = targetLed;
+                    updateLedIndicators();
+                    setStatusText(`Cử chỉ: ${targetLed} ngón (Bật Đèn ${targetLed} - 200 OK)`);
+                } else {
+                    setStatusText(`Cử chỉ ${targetLed} ngón: Lỗi kết nối ESP32-C6`);
+                }
             }
         } catch (e) {
             console.error("Lỗi cử chỉ:", e);
@@ -1006,6 +1108,17 @@
     }
 
     window.addEventListener("DOMContentLoaded", () => {
+        const hostInput = document.getElementById("esp32-host");
+        if (hostInput) {
+            const savedHost = localStorage.getItem("esp32_host_url");
+            if (savedHost) {
+                hostInput.value = savedHost;
+            }
+            hostInput.addEventListener("change", () => {
+                localStorage.setItem("esp32_host_url", getEsp32BaseUrl());
+                hostInput.value = getEsp32BaseUrl();
+            });
+        }
         updateLedIndicators();
         initMediaPipeHands();
         startCamera();
