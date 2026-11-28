@@ -6,10 +6,11 @@
     <title>Điều Khiển Đèn ESP32</title>
 
     <!-- Thư viện MediaPipe Hands: Ưu tiên tải cục bộ siêu nhanh, tự động dự phòng sang CDN -->
+    <script>window.__mpUseCdn = false;</script>
     <script src="mediapipe/camera_utils.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js'"></script>
     <script src="mediapipe/control_utils.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js'"></script>
     <script src="mediapipe/drawing_utils.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js'"></script>
-    <script src="mediapipe/hands.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js'"></script>
+    <script src="mediapipe/hands.js" onerror="window.__mpUseCdn=true;this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js'"></script>
 
     <style>
         * {
@@ -71,6 +72,31 @@
             font-weight: 500;
         }
 
+        .top-host-bar {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 6px;
+            font-size: 11px;
+            color: #64748b;
+        }
+
+        .top-host-input {
+            width: 175px;
+            padding: 4px 8px;
+            font-size: 11px;
+            color: #1e293b;
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            outline: none;
+            transition: border-color 0.15s ease;
+        }
+
+        .top-host-input:focus {
+            border-color: #2563eb;
+        }
+
         /* Khung thẻ chức năng */
         .card {
             background: #ffffff;
@@ -120,9 +146,21 @@
             transition: all 0.2s ease;
         }
 
-        .status-dot.active {
+        .status-dot.active.led-1 {
+            background-color: #ef4444;
+            box-shadow: 0 0 8px rgba(239, 68, 68, 0.7);
+        }
+        .status-dot.active.led-2 {
+            background-color: #eab308;
+            box-shadow: 0 0 8px rgba(234, 179, 8, 0.7);
+        }
+        .status-dot.active.led-3 {
             background-color: #16a34a;
-            box-shadow: 0 0 6px rgba(22, 163, 74, 0.6);
+            box-shadow: 0 0 8px rgba(22, 163, 74, 0.7);
+        }
+        .status-dot.active.led-4 {
+            background-color: #2563eb;
+            box-shadow: 0 0 8px rgba(37, 99, 235, 0.7);
         }
 
         .led-name {
@@ -158,10 +196,17 @@
         }
 
         .btn-on {
+            background-color: #dcfce7;
+            color: #15803d;
+            border: 1px solid #86efac;
+        }
+        .btn-on:hover { background-color: #bbf7d0; }
+        .btn-on.is-active {
             background-color: #16a34a;
             color: #ffffff;
+            border-color: #15803d;
+            box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.25);
         }
-        .btn-on:hover { background-color: #15803d; }
 
         .btn-off {
             background-color: #ffffff;
@@ -169,6 +214,12 @@
             border: 1px solid #fca5a5;
         }
         .btn-off:hover { background-color: #fef2f2; }
+        .btn-off.is-active {
+            background-color: #dc2626;
+            color: #ffffff;
+            border-color: #b91c1c;
+            box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.2);
+        }
 
         /* Nút chức năng chung */
         .all-actions {
@@ -349,6 +400,11 @@
 
 <div class="container">
 
+    <div class="top-host-bar">
+        <label for="esp32-host" title="Wi-Fi AP: nhom3 | MK: 88888888">ESP32:</label>
+        <input type="text" id="esp32-host" class="top-host-input" value="http://192.168.4.1" placeholder="http://192.168.4.1">
+    </div>
+
     <header>
         <h1>Điều Khiển Đèn ESP32</h1>
         <p>Bật tắt bằng nút bấm hoặc cử chỉ bàn tay</p>
@@ -362,49 +418,49 @@
         <div class="led-list">
             <div class="led-row">
                 <div class="led-info">
-                    <span class="status-dot" id="dot-1"></span>
-                    <span class="led-name">Đèn 1</span>
+                    <span class="status-dot led-1" id="dot-1"></span>
+                    <span class="led-name">LED 1 (Đỏ)</span>
                     <span class="led-pin">(GPIO 25)</span>
                 </div>
                 <div class="btn-pair">
-                    <button class="btn btn-on" onclick="ledOn(1)">Bật</button>
-                    <button class="btn btn-off" onclick="ledOff(1)">Tắt</button>
+                    <button class="btn btn-on" id="btn-on-1" onclick="ledOn(1)">Bật</button>
+                    <button class="btn btn-off is-active" id="btn-off-1" onclick="ledOff(1)">Tắt</button>
                 </div>
             </div>
 
             <div class="led-row">
                 <div class="led-info">
-                    <span class="status-dot" id="dot-2"></span>
-                    <span class="led-name">Đèn 2</span>
+                    <span class="status-dot led-2" id="dot-2"></span>
+                    <span class="led-name">LED 2 (Vàng)</span>
                     <span class="led-pin">(GPIO 26)</span>
                 </div>
                 <div class="btn-pair">
-                    <button class="btn btn-on" onclick="ledOn(2)">Bật</button>
-                    <button class="btn btn-off" onclick="ledOff(2)">Tắt</button>
+                    <button class="btn btn-on" id="btn-on-2" onclick="ledOn(2)">Bật</button>
+                    <button class="btn btn-off is-active" id="btn-off-2" onclick="ledOff(2)">Tắt</button>
                 </div>
             </div>
 
             <div class="led-row">
                 <div class="led-info">
-                    <span class="status-dot" id="dot-3"></span>
-                    <span class="led-name">Đèn 3</span>
+                    <span class="status-dot led-3" id="dot-3"></span>
+                    <span class="led-name">LED 3 (Xanh lá)</span>
                     <span class="led-pin">(GPIO 27)</span>
                 </div>
                 <div class="btn-pair">
-                    <button class="btn btn-on" onclick="ledOn(3)">Bật</button>
-                    <button class="btn btn-off" onclick="ledOff(3)">Tắt</button>
+                    <button class="btn btn-on" id="btn-on-3" onclick="ledOn(3)">Bật</button>
+                    <button class="btn btn-off is-active" id="btn-off-3" onclick="ledOff(3)">Tắt</button>
                 </div>
             </div>
 
             <div class="led-row">
                 <div class="led-info">
-                    <span class="status-dot" id="dot-4"></span>
-                    <span class="led-name">Đèn 4</span>
+                    <span class="status-dot led-4" id="dot-4"></span>
+                    <span class="led-name">LED 4 (Xanh dương)</span>
                     <span class="led-pin">(GPIO 32)</span>
                 </div>
                 <div class="btn-pair">
-                    <button class="btn btn-on" onclick="ledOn(4)">Bật</button>
-                    <button class="btn btn-off" onclick="ledOff(4)">Tắt</button>
+                    <button class="btn btn-on" id="btn-on-4" onclick="ledOn(4)">Bật</button>
+                    <button class="btn btn-off is-active" id="btn-off-4" onclick="ledOff(4)">Tắt</button>
                 </div>
             </div>
         </div>
@@ -462,34 +518,61 @@
 </div>
 
 <script>
-    const ESP32_IP = "192.168.4.1";
+    const DEFAULT_ESP32_URL = "http://192.168.4.1";
+
+    function getEsp32BaseUrl() {
+        const input = document.getElementById("esp32-host");
+        let raw = (input ? input.value : "").trim();
+        if (!raw) raw = DEFAULT_ESP32_URL;
+        if (!/^https?:\/\//i.test(raw)) raw = "http://" + raw;
+        return raw.replace(/\/+$/, "");
+    }
 
     const ledStates = { 1: false, 2: false, 3: false, 4: false };
     let isBlinking = false;
     let blinkIntervalId = null;
+    let hasOnlyRoute = true;
+    let gestureAbortController = null;
 
     function updateLedIndicators() {
         for (let i = 1; i <= 4; i++) {
             const dot = document.getElementById(`dot-${i}`);
-            if (dot) {
-                if (ledStates[i]) {
-                    dot.classList.add("active");
-                } else {
-                    dot.classList.remove("active");
-                }
-            }
+            const btnOn = document.getElementById(`btn-on-${i}`);
+            const btnOff = document.getElementById(`btn-off-${i}`);
+            const isOn = !!ledStates[i];
+
+            if (dot) dot.classList.toggle("active", isOn);
+            if (btnOn) btnOn.classList.toggle("is-active", isOn);
+            if (btnOff) btnOff.classList.toggle("is-active", !isOn);
         }
     }
 
-    function sendEsp32Command(path) {
-        const url = `http://${ESP32_IP}${path}`;
-        return fetch(url, {
-            method: "GET",
-            mode: "no-cors",
-            cache: "no-store"
-        }).catch(err => {
-            console.log("Gửi lệnh ESP32:", path);
-        });
+    async function sendEsp32Command(path, { timeoutMs = 1500, externalSignal = null } = {}) {
+        const url = `${getEsp32BaseUrl()}${path}`;
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), timeoutMs);
+        const onExternalAbort = () => controller.abort();
+        if (externalSignal) {
+            if (externalSignal.aborted) {
+                clearTimeout(timer);
+                return { ok: false, aborted: true, status: 0 };
+            }
+            externalSignal.addEventListener("abort", onExternalAbort, { once: true });
+        }
+
+        try {
+            const response = await fetch(url, {
+                method: "GET",
+                cache: "no-store",
+                signal: controller.signal
+            });
+            return { ok: (response.status === 200 || response.ok), aborted: false, status: response.status };
+        } catch (err) {
+            return { ok: false, aborted: (err && err.name === "AbortError"), status: 0 };
+        } finally {
+            clearTimeout(timer);
+            if (externalSignal) externalSignal.removeEventListener("abort", onExternalAbort);
+        }
     }
 
     let currentChaserStep = 0;
@@ -513,85 +596,75 @@
     }
 
     function runBlinkLoop() {
-        // Tắt tất cả đèn trước khi bắt đầu chu kỳ đuổi đèn
-        for (let i = 1; i <= 4; i++) {
-            ledStates[i] = false;
-        }
+        for (let i = 1; i <= 4; i++) ledStates[i] = false;
         updateLedIndicators();
 
         async function stepChaser() {
             if (!isBlinking) return;
+            const currLed = currentChaserStep + 1;
+            const prevLed = (currentChaserStep === 0) ? 4 : currentChaserStep;
 
-            // Xác định đèn hiện tại và đèn trước đó (1 -> 2 -> 3 -> 4)
-            const currLed = currentChaserStep + 1; // 1, 2, 3, 4
-            const prevLed = (currentChaserStep === 0) ? 4 : currentChaserStep; // 4, 1, 2, 3
+            await Promise.all([
+                sendEsp32Command(`/led${prevLed}/off`, { timeoutMs: 450 }),
+                sendEsp32Command(`/led${currLed}/on`, { timeoutMs: 450 })
+            ]);
 
-            // Cập nhật trạng thái đèn trên màn hình
-            for (let i = 1; i <= 4; i++) {
-                ledStates[i] = (i === currLed);
-            }
+            for (let i = 1; i <= 4; i++) ledStates[i] = (i === currLed);
             updateLedIndicators();
             setStatusText(`Nhấp nháy: Đèn ${currLed} sáng (500ms)`);
-
-            // Gửi lệnh phần cứng đến ESP32: Tắt đèn trước, bật đèn hiện tại
-            await sendEsp32Command(`/led${prevLed}/off`);
-            await sendEsp32Command(`/led${currLed}/on`);
-
-            // Chuyển sang đèn kế tiếp (1 -> 2 -> 3 -> 4 -> 1)
             currentChaserStep = (currentChaserStep + 1) % 4;
         }
 
-        // Chạy ngay bước đầu tiên
         stepChaser();
-
-        // Lặp lại chính xác mỗi 500ms
         blinkIntervalId = setInterval(stepChaser, 500);
     }
 
     async function allOn() {
         stopBlinking();
-        for (let i = 1; i <= 4; i++) {
-            ledStates[i] = true;
-            await sendEsp32Command(`/led${i}/on`);
+        const res = await sendEsp32Command("/all/on");
+        if (res.ok) {
+            for (let i = 1; i <= 4; i++) ledStates[i] = true;
+            updateLedIndicators();
+            setStatusText("Đã bật tất cả 4 đèn");
+        } else if (!res.aborted) {
+            setStatusText("Lỗi kết nối ESP32 (kiểm tra Wi-Fi/IP)");
         }
-        currentLedOn = 5;
-        updateLedIndicators();
-        setStatusText("Đã bật tất cả 4 đèn");
     }
 
     async function ledOn(id) {
         stopBlinking();
-        for (let i = 1; i <= 4; i++) {
-            if (i !== id && ledStates[i]) {
-                ledStates[i] = false;
-                await sendEsp32Command(`/led${i}/off`);
-            }
+        const res = await sendEsp32Command(`/led${id}/on`);
+        if (res.ok) {
+            ledStates[id] = true;
+            updateLedIndicators();
+            setStatusText(`Đã bật Đèn ${id}`);
+        } else if (!res.aborted) {
+            setStatusText("Lỗi kết nối ESP32 (kiểm tra Wi-Fi/IP)");
         }
-        ledStates[id] = true;
-        currentLedOn = id;
-        updateLedIndicators();
-        setStatusText(`Đã bật Đèn ${id}`);
-        await sendEsp32Command(`/led${id}/on`);
     }
 
     async function ledOff(id) {
         stopBlinking();
-        ledStates[id] = false;
-        if (currentLedOn === id) currentLedOn = 0;
-        updateLedIndicators();
-        setStatusText(`Đã tắt Đèn ${id}`);
-        await sendEsp32Command(`/led${id}/off`);
+        const res = await sendEsp32Command(`/led${id}/off`);
+        if (res.ok) {
+            ledStates[id] = false;
+            updateLedIndicators();
+            setStatusText(`Đã tắt Đèn ${id}`);
+        } else if (!res.aborted) {
+            setStatusText("Lỗi kết nối ESP32 (kiểm tra Wi-Fi/IP)");
+        }
     }
 
     async function allOff() {
         stopBlinking();
-        for (let i = 1; i <= 4; i++) {
-            ledStates[i] = false;
-            await sendEsp32Command(`/led${i}/off`);
+        const res = await sendEsp32Command("/all/off");
+        if (res.ok) {
+            for (let i = 1; i <= 4; i++) ledStates[i] = false;
+            updateLedIndicators();
+            setStatusText("Đã tắt tất cả đèn");
+        } else if (!res.aborted) {
+            setStatusText("Lỗi kết nối ESP32 (kiểm tra Wi-Fi/IP)");
         }
-        currentLedOn = 0;
-        updateLedIndicators();
-        setStatusText("Đã tắt tất cả đèn");
     }
 
     const statusElem = document.getElementById("status");
@@ -653,8 +726,8 @@
             const constraints = {
                 video: {
                     facingMode: currentFacingMode,
-                    width: { ideal: 480 },
-                    height: { ideal: 360 }
+                    width: { ideal: 320 },
+                    height: { ideal: 240 }
                 },
                 audio: false
             };
@@ -707,6 +780,21 @@
         startCamera();
     }
 
+    async function createAndInitHands(baseUrl) {
+        const instance = new Hands({
+            locateFile: (file) => baseUrl + file
+        });
+        instance.setOptions({
+            maxNumHands: 1,
+            modelComplexity: 0,
+            minDetectionConfidence: 0.5,
+            minTrackingConfidence: 0.5
+        });
+        instance.onResults(onHandResults);
+        await instance.initialize();
+        return instance;
+    }
+
     async function initMediaPipeHands() {
         if (isMediaPipeReady && hands) return true;
         if (isInitializingHands) return false;
@@ -719,68 +807,52 @@
         isInitializingHands = true;
         setCameraBadge("Nạp mô hình AI...", "#3b82f6");
 
+        const cdnBase = "https://cdn.jsdelivr.net/npm/@mediapipe/hands/";
+        // Nếu script hands.js đã nạp qua CDN (ví dụ trong IPA file://), dùng thẳng CDN để không tốn thời gian thử cục bộ
+        const primaryBase = window.__mpUseCdn ? cdnBase : "mediapipe/";
+        const fallbackBase = window.__mpUseCdn ? null : cdnBase;
+
         try {
-            // Ưu tiên nạp từ thư mục mediapipe/ cục bộ (chạy offline siêu tốc)
-            hands = new Hands({
-                locateFile: (file) => "mediapipe/" + file
-            });
-
-            hands.setOptions({
-                maxNumHands: 1,
-                modelComplexity: 0,
-                minDetectionConfidence: 0.5,
-                minTrackingConfidence: 0.5
-            });
-
-            hands.onResults(onHandResults);
-            await hands.initialize();
-
+            hands = await createAndInitHands(primaryBase);
             isMediaPipeReady = true;
             isInitializingHands = false;
             setCameraBadge("Camera & AI sẵn sàng", "#22c55e");
             setStatusText("AI cử chỉ: Sẵn sàng! Hãy đưa bàn tay vào khung hình.");
             return true;
-        } catch (localErr) {
-            console.warn("Nạp mediapipe cục bộ chưa thành công, thử dùng CDN:", localErr);
-            try {
-                hands = new Hands({
-                    locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
-                });
-
-                hands.setOptions({
-                    maxNumHands: 1,
-                    modelComplexity: 0,
-                    minDetectionConfidence: 0.5,
-                    minTrackingConfidence: 0.5
-                });
-
-                hands.onResults(onHandResults);
-                await hands.initialize();
-
-                isMediaPipeReady = true;
-                isInitializingHands = false;
-                setCameraBadge("Camera & AI sẵn sàng (CDN)", "#22c55e");
-                setStatusText("AI cử chỉ: Sẵn sàng (CDN)! Hãy đưa tay vào khung hình.");
-                return true;
-            } catch (cdnErr) {
-                console.error("Lỗi khởi tạo MediaPipe:", cdnErr);
-                isInitializingHands = false;
-                setCameraBadge("Lỗi tải AI cử chỉ", "#ef4444");
-                setStatusText("Lỗi tải mô hình AI cử chỉ. Vui lòng thử lại.");
-                return false;
+        } catch (err) {
+            if (fallbackBase) {
+                console.warn("Nạp mediapipe cục bộ chưa thành công, chuyển CDN:", err);
+                try {
+                    hands = await createAndInitHands(fallbackBase);
+                    isMediaPipeReady = true;
+                    isInitializingHands = false;
+                    setCameraBadge("Camera & AI sẵn sàng (CDN)", "#22c55e");
+                    setStatusText("AI cử chỉ: Sẵn sàng (CDN)! Hãy đưa tay vào khung hình.");
+                    return true;
+                } catch (cdnErr) {
+                    console.error("Lỗi khởi tạo MediaPipe:", cdnErr);
+                }
             }
+            isInitializingHands = false;
+            setCameraBadge("Lỗi tải AI cử chỉ", "#ef4444");
+            setStatusText("Chưa tải được AI cử chỉ (vẫn bấm nút bình thường).");
+            return false;
         }
     }
+
+    let lastInferenceTime = 0;
 
     async function processVideoFrame() {
         if (!isCameraRunning) return;
 
-        // Tự động kích hoạt nạp mô hình AI nếu chưa sẵn sàng
         if (!isMediaPipeReady && !isInitializingHands && typeof Hands !== "undefined") {
             initMediaPipeHands();
         }
 
-        if (video.readyState >= 2 && !isProcessingFrame && hands && isMediaPipeReady && video.videoWidth > 0) {
+        const now = performance.now();
+        // Giới hạn tối đa ~20 FPS cho AI để CPU/GPU rảnh xử lý HTTP & nút bấm tức thì
+        if (video.readyState >= 2 && !isProcessingFrame && hands && isMediaPipeReady && video.videoWidth > 0 && (now - lastInferenceTime >= 50)) {
+            lastInferenceTime = now;
             isProcessingFrame = true;
             try {
                 await hands.send({ image: video });
@@ -914,10 +986,9 @@
     }
 
     const gestureHistory = [];
-    const HISTORY_SIZE = 5;
+    const HISTORY_SIZE = 3;
     let activeGesture = -1;
     let currentLedOn = 0;
-    let isExecuting = false;
 
     function processGestureWithFilter(rawCount) {
         gestureHistory.push(rawCount);
@@ -950,62 +1021,78 @@
 
         setGesturePill(labelMap[bestGesture] || `${bestGesture} ngón`, true);
 
-        if (maxOccur >= 3 && bestGesture !== activeGesture) {
+        if (maxOccur >= 2 && bestGesture !== activeGesture) {
             activeGesture = bestGesture;
             executeGestureChange(bestGesture);
         }
     }
 
     async function executeGestureChange(gesture) {
-        if (isExecuting) return;
-        isExecuting = true;
+        stopBlinking();
+        // Hủy ngay lệnh cử chỉ cũ còn đang chờ mạng để ưu tiên cử chỉ mới nhất
+        if (gestureAbortController) {
+            gestureAbortController.abort();
+        }
+        gestureAbortController = new AbortController();
+        const signal = gestureAbortController.signal;
 
         try {
             if (gesture === 0) {
-                stopBlinking();
-                setStatusText("Cử chỉ: Nắm tay (Tắt tất cả đèn)");
-                for (let i = 1; i <= 4; i++) {
-                    ledStates[i] = false;
-                    await sendEsp32Command(`/led${i}/off`);
+                const res = await sendEsp32Command("/all/off", { timeoutMs: 1000, externalSignal: signal });
+                if (res.ok) {
+                    for (let i = 1; i <= 4; i++) ledStates[i] = false;
+                    currentLedOn = 0;
+                    updateLedIndicators();
+                    setStatusText("Cử chỉ: Nắm tay (Tắt tất cả đèn)");
                 }
-                currentLedOn = 0;
-                updateLedIndicators();
-
             } else if (gesture === 5) {
-                stopBlinking();
-                setStatusText("Cử chỉ: 5 ngón (Bật cả 4 đèn)");
-                for (let i = 1; i <= 4; i++) {
-                    ledStates[i] = true;
-                    await sendEsp32Command(`/led${i}/on`);
+                const res = await sendEsp32Command("/all/on", { timeoutMs: 1000, externalSignal: signal });
+                if (res.ok) {
+                    for (let i = 1; i <= 4; i++) ledStates[i] = true;
+                    currentLedOn = 5;
+                    updateLedIndicators();
+                    setStatusText("Cử chỉ: 5 ngón (Bật cả 4 đèn)");
                 }
-                currentLedOn = 5;
-                updateLedIndicators();
-
             } else if (gesture >= 1 && gesture <= 4) {
-                stopBlinking();
                 const targetLed = gesture;
-                setStatusText(`Cử chỉ: ${targetLed} ngón (Bật Đèn ${targetLed})`);
+                let res = hasOnlyRoute
+                    ? await sendEsp32Command(`/only/${targetLed}`, { timeoutMs: 1000, externalSignal: signal })
+                    : { ok: false, status: 404, aborted: false };
 
-                for (let i = 1; i <= 4; i++) {
-                    if (i !== targetLed && ledStates[i]) {
-                        ledStates[i] = false;
-                        await sendEsp32Command(`/led${i}/off`);
+                if (!res.ok && !res.aborted && res.status === 404) {
+                    hasOnlyRoute = false;
+                    const jobs = [];
+                    for (let i = 1; i <= 4; i++) {
+                        jobs.push(sendEsp32Command(i === targetLed ? `/led${i}/on` : `/led${i}/off`, { timeoutMs: 1000, externalSignal: signal }));
                     }
+                    const results = await Promise.all(jobs);
+                    res = { ok: results.some(r => r.ok), aborted: results.some(r => r.aborted) };
                 }
 
-                ledStates[targetLed] = true;
-                await sendEsp32Command(`/led${targetLed}/on`);
-                currentLedOn = targetLed;
-                updateLedIndicators();
+                if (res.ok) {
+                    for (let i = 1; i <= 4; i++) ledStates[i] = (i === targetLed);
+                    currentLedOn = targetLed;
+                    updateLedIndicators();
+                    setStatusText(`Cử chỉ: ${targetLed} ngón (Bật Đèn ${targetLed})`);
+                }
             }
         } catch (e) {
             console.error("Lỗi cử chỉ:", e);
-        } finally {
-            setTimeout(() => { isExecuting = false; }, 250);
         }
     }
 
     window.addEventListener("DOMContentLoaded", () => {
+        const hostInput = document.getElementById("esp32-host");
+        if (hostInput) {
+            const savedHost = localStorage.getItem("esp32_host_url");
+            hostInput.value = savedHost || DEFAULT_ESP32_URL;
+            const saveHost = () => {
+                const norm = getEsp32BaseUrl();
+                localStorage.setItem("esp32_host_url", norm);
+                hostInput.value = norm;
+            };
+            hostInput.addEventListener("change", saveHost);
+        }
         updateLedIndicators();
         initMediaPipeHands();
         startCamera();
